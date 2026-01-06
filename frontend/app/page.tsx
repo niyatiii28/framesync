@@ -1,9 +1,28 @@
-import {useRef} from "react";
-import Image from "next/image";
+import {useRef, useEffect} from "react";
 
 export default function Home() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    if(!video || !canvas) return;
+
+    const handleLoadedMetaData = () => {
+      const rect = video.getBoundingClientRect();
+
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+    };
+
+    video.addEventListener("loadedmetadata", handleLoadedMetaData);
+
+    return () => {
+      video.removeEventListener("loadedmetadata", handleLoadedMetaData)
+    };
+  }, []);
   return (
     <div>
       <h2>FrameSync Home Page</h2>
@@ -16,8 +35,6 @@ export default function Home() {
         </video>
         <canvas
           ref = {canvasRef}
-          width={600}
-          height={338}
           style={{
             position: "absolute",
             top: 0,
