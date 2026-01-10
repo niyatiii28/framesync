@@ -40,6 +40,29 @@ export default function Home() {
       video.removeEventListener("loadedmetadata", handleLoadedMetaData)
     };
   }, []);
+
+  const handleMouseDown = (
+    e: React.MouseEvent<HTMLCanvasElement>
+  ) => {
+    if(!isDrawMode) return;
+
+    const canvas = canvasRef.current;
+    const ctx = ctxRef.current;
+    const video = videoRef.current;
+
+    if(!canvas || !ctx || !video) return;
+    
+    video.pause();
+    isDrawingRef.current = true;
+
+    const rect = canvas.getBoundingClientRect();
+
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    lastPointerRef.current = {x, y};
+  }
+
   return (
     <div>
       <h2>FrameSync Home Page</h2>
@@ -52,6 +75,7 @@ export default function Home() {
         </video>
         <canvas
           ref = {canvasRef}
+          onMouseDown={handleMouseDown}
           style={{
             position: "absolute",
             top: 0,
