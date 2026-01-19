@@ -65,30 +65,59 @@ export default function Home() {
   }
 
   return (
-    <div>
-      <h2>FrameSync Home Page</h2>
-      <div style={{position : "relative", width : 600}}>
-        <video
-          ref={videoRef} 
-          src="/random.mp4" 
-          controls
-          width={600}>
-        </video>
-        <canvas
-          ref = {canvasRef}
-          onMouseDown={handleMouseDown}
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            border: "1px solid red",
-            pointerEvents: isDrawMode ? "auto" : "none",
-          }}></canvas>
+    <div style={{height: "100vh", display: "flex", flexDirection: "column"}}>
+
+      {/* Header */}
+      <div style={{height: 48, background: "#000000", color: "white", padding: 10}}>
+        Framesync
       </div>
 
-      <button onClick={() => setIsDrawMode((prev) => !prev)}>
-        {isDrawMode ? "Disable Draw Mode" : "Enable Draw Mode"}
-      </button>
+      {/* Main content */}
+      <div style={{flex: 1, display: "flex"}}>
+
+        {/* Left palette */}
+        <div style={{width: 80, background: "#232323", padding: 8}}>
+          Tools
+        </div>
+
+        {/* Centre video area */}
+        <div style={{flex: 1, display: "flex", justifyContent: "center", alignItems: "center"}}>
+          <div style={{position: "relative", width: 600}}>
+            <video
+              ref={videoRef}
+              src="/random.mp4"
+              controls
+              width={600}>
+            </video>
+
+            <canvas
+              ref={canvasRef}
+              onMouseDown={handleMouseDown}
+              style={{
+                width: 600,
+                position: "absolute",
+                top: 0,
+                left: 0,
+                border: "1px solid red",
+                pointerEvents: isDrawMode ? "auto" : "none"
+              }}>
+            </canvas>
+          </div>
+        </div>
+
+        {/* Right comments */}
+        <div style={{width: 300, background: "#1e1d1d", padding: 8}}>
+          Comments
+        </div>
+      </div>
+      
+      {/* Bottom controls */}
+      <div style={{height: 80, background: "#2b2a2a", padding: 8}}>
+        <button onClick={() => setIsDrawMode(prev => !prev)}>
+          {isDrawMode ? "Disable Draw Mode" : "Enable Draw Mode"}
+        </button>
+      </div>
     </div>
+
   );
 }
