@@ -58,12 +58,40 @@ export default function VideoCanvas() {
     isDrawingRef.current = true;
 
     const rect = canvas.getBoundingClientRect();
-
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
     
     lastPointerRef.current = {x, y};
   }
+
+  const handleMouseMove = (
+    e: React.MouseEvent<HTMLCanvasElement>
+  ) => {
+    if(!isDrawMode) return;
+    if(!isDrawingRef.current) return;
+
+    const canvas = canvasRef.current;
+    const ctx = ctxRef.current;
+    const last = lastPointerRef.current;
+
+    if(!canvas || !ctx || !last) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    ctx.beginPath();
+    ctx.moveTo(last.x, last.y);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+
+    lastPointerRef.current = {x, y};
+  };
+
+  const stopDrawing = () => {
+    isDrawingRef.current = false;
+    lastPointerRef.current = null;
+  };
 
   return (
     <div>
@@ -78,6 +106,9 @@ export default function VideoCanvas() {
             <canvas
               ref={canvasRef}
               onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={stopDrawing}
+              onMouseLeave={stopDrawing}
               style={{
                 width: 600,
                 position: "absolute",
