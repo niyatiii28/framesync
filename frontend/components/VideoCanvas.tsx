@@ -2,16 +2,17 @@
 
 import {useRef, useEffect, useState} from "react";
 
+type Tool = "pen" | "eraser";
+
 export default function VideoCanvas() {
     const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const [isDrawMode, setIsDrawMode] = useState(false);
+  const [tool, setTool] = useState<Tool>("pen");
 
   const isDrawingRef = useRef(false);
-
   const lastPointerRef = useRef<{x: number; y: number} | null>(null);
-
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
 
   useEffect(() => {
@@ -80,6 +81,14 @@ export default function VideoCanvas() {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
+    if(tool === "pen") {
+      ctx.globalCompositeOperation = "source-over";
+      ctx.strokeStyle = "red";
+    } else if(tool === "eraser") {
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.strokeStyle = "rgba(0, 0, 0, 1)";
+    }
+
     ctx.beginPath();
     ctx.moveTo(last.x, last.y);
     ctx.lineTo(x, y);
@@ -123,6 +132,10 @@ export default function VideoCanvas() {
           <button onClick={() => setIsDrawMode(prev => !prev)}>
             {isDrawMode ? "Disable Draw Mode" : "Enable Draw Mode"}
           </button>
+          <div style={{marginTop: 10}}>
+            <button onClick={() => setTool("pen")}>Pen</button>
+            <button onClick={() => setTool("eraser")}>Eraser</button>
+          </div>
     </div>
   )
 }
