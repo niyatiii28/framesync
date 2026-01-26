@@ -1,19 +1,31 @@
 "use client";
 
-import {useRef, useEffect, useState} from "react";
+import {useRef, useEffect, useState, forwardRef, useImperativeHandle} from "react";
 
-type Tool = "pen" | "eraser";
 
-export default function VideoCanvas() {
-    const videoRef = useRef<HTMLVideoElement | null>(null);
+  const VideoCanvas = forwardRef(function VideoCanvas(
+    {tool}: {tool: "pen" | "eraser" },
+    ref
+  ) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const [isDrawMode, setIsDrawMode] = useState(false);
-  const [tool, setTool] = useState<Tool>("pen");
 
   const isDrawingRef = useRef(false);
   const lastPointerRef = useRef<{x: number; y: number} | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    clearCanvas() {
+      const canvas = canvasRef.current;
+      const ctx = ctxRef.current;
+
+      if(!canvas || !ctx)  return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    },
+  }));
 
   useEffect(() => {
     const video = videoRef.current;
@@ -132,10 +144,7 @@ export default function VideoCanvas() {
           <button onClick={() => setIsDrawMode(prev => !prev)}>
             {isDrawMode ? "Disable Draw Mode" : "Enable Draw Mode"}
           </button>
-          <div style={{marginTop: 10}}>
-            <button onClick={() => setTool("pen")}>Pen</button>
-            <button onClick={() => setTool("eraser")}>Eraser</button>
-          </div>
     </div>
-  )
-}
+  );
+});
+export default VideoCanvas;

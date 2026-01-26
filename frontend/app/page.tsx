@@ -1,8 +1,14 @@
 "use client";
 
+import {useRef, useEffect, useState} from "react";
 import VideoCanvas from "@/components/VideoCanvas";
 
+type Tool = "pen" | "eraser";
+
 export default function Home() {
+  const videoCanvasRef = useRef<{clearCanvas: () => void} | null>(null);
+  const [tool, setTool] = useState<Tool>("pen");
+
   return (
     <div style={{height: "100vh", display: "flex", flexDirection: "column"}}>
 
@@ -24,15 +30,19 @@ export default function Home() {
           gap: 8
         }}
         >
-          <button>✏️</button>
-          <button>🎨</button>
-          <button>🖊️</button>
-          <button>🖌️</button>
+          <button onClick={() => setTool("pen")}>Pen</button>
+          <button onClick={() => setTool("eraser")}>Eraser</button>
+          <button onClick={() => {
+            videoCanvasRef.current?.clearCanvas();
+          }}
+          >
+            Clear
+          </button>
         </div>
 
         {/* Centre video area */}
         <div style={{flex: 1, display: "flex", justifyContent: "center", alignItems: "center"}}>
-          <VideoCanvas />
+          <VideoCanvas ref = {videoCanvasRef} tool = {tool} />
         </div>
 
         {/* Right comments */}
