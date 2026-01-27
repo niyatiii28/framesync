@@ -8,6 +8,7 @@ type Tool = "pen" | "eraser";
 export default function Home() {
   const videoCanvasRef = useRef<{clearCanvas: () => void} | null>(null);
   const [tool, setTool] = useState<Tool>("pen");
+  const [strokeSize, setStrokeSize] = useState(3);
 
   return (
     <div style={{height: "100vh", display: "flex", flexDirection: "column"}}>
@@ -38,11 +39,24 @@ export default function Home() {
           >
             Clear
           </button>
+
+          <label style={{ color: "white", fontSize: 12}}>Size</label>
+          <input 
+            type="range"
+            min={1}
+            max={20}
+            value={strokeSize}
+            onChange={(e) => setStrokeSize(Number(e.target.value))} 
+          />
         </div>
 
         {/* Centre video area */}
         <div style={{flex: 1, display: "flex", justifyContent: "center", alignItems: "center"}}>
-          <VideoCanvas ref = {videoCanvasRef} tool = {tool} />
+          <VideoCanvas 
+            ref = {videoCanvasRef} 
+            tool = {tool}
+            strokeSize = {strokeSize} 
+            />
         </div>
 
         {/* Right comments */}

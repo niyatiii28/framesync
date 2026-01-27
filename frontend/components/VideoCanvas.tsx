@@ -4,7 +4,10 @@ import {useRef, useEffect, useState, forwardRef, useImperativeHandle} from "reac
 
 
   const VideoCanvas = forwardRef(function VideoCanvas(
-    {tool}: {tool: "pen" | "eraser" },
+    {
+      tool, 
+      strokeSize,
+    }: {tool: "pen" | "eraser"; strokeSize: number},
     ref
   ) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -101,6 +104,7 @@ import {useRef, useEffect, useState, forwardRef, useImperativeHandle} from "reac
       ctx.strokeStyle = "rgba(0, 0, 0, 1)";
     }
 
+    ctx.lineWidth = strokeSize;
     ctx.beginPath();
     ctx.moveTo(last.x, last.y);
     ctx.lineTo(x, y);
