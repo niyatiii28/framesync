@@ -2,22 +2,34 @@
 
 import {useRef, useEffect, useState, forwardRef, useImperativeHandle} from "react";
 
+type Point = {x: number; y: number};
+
+type Stroke = {
+  tool: "pen" | "eraser";
+  size: number;
+  points: Point[];
+};  
 
   const VideoCanvas = forwardRef(function VideoCanvas(
     {
       tool, 
       strokeSize,
-    }: {tool: "pen" | "eraser"; strokeSize: number},
+      isDrawMode,
+      onStrokeComplete
+    }: {tool: "pen" | "eraser"; 
+        strokeSize: number;
+        isDrawMode: boolean;
+        onStrokeComplete: (stroke: Stroke, time: number) => void},
     ref
   ) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  const [isDrawMode, setIsDrawMode] = useState(false);
-
   const isDrawingRef = useRef(false);
   const lastPointerRef = useRef<{x: number; y: number} | null>(null);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
+
+  const currentStrokeRef = useRef<Stroke | null>(null);
 
   useImperativeHandle(ref, () => ({
     clearCanvas() {
@@ -41,6 +53,8 @@ import {useRef, useEffect, useState, forwardRef, useImperativeHandle} from "reac
 
       canvas.width = rect.width;
       canvas.height = rect.height;
+
+      console.log("canvas size", canvas.width, canvas.height);
 
       const ctx = canvas.getContext("2d");
       if(!ctx) return;
@@ -78,6 +92,12 @@ import {useRef, useEffect, useState, forwardRef, useImperativeHandle} from "reac
     const y = e.clientY - rect.top;
     
     lastPointerRef.current = {x, y};
+
+    currentStrokeRef.current = {
+      tool,
+      size: strokeSize,
+      points: [{x, y}],
+    };
   }
 
   const handleMouseMove = (
@@ -110,12 +130,21 @@ import {useRef, useEffect, useState, forwardRef, useImperativeHandle} from "reac
     ctx.lineTo(x, y);
     ctx.stroke();
 
+    currentStrokeRef.current?.points.push({x, y});
+
     lastPointerRef.current = {x, y};
   };
 
   const stopDrawing = () => {
+    if(isDrawingRef.current && currentStrokeRef.current && currentStrokeRef.current.points.length > 1) {
+      const video = videoRef.current;
+      if(video) {
+        onStrokeComplete(currentStrokeRef.current, video.currentTime);
+      }
+    }
     isDrawingRef.current = false;
     lastPointerRef.current = null;
+    currentStrokeRef.current = null;
   };
 
   return (
@@ -136,18 +165,16 @@ import {useRef, useEffect, useState, forwardRef, useImperativeHandle} from "reac
               onMouseLeave={stopDrawing}
               style={{
                 width: 600,
+                height: "100%",
                 position: "absolute",
                 top: 0,
                 left: 0,
                 border: "1px solid red",
+                zIndex: 10,
                 pointerEvents: isDrawMode ? "auto" : "none"
               }}>
             </canvas>
           </div>
-
-          <button onClick={() => setIsDrawMode(prev => !prev)}>
-            {isDrawMode ? "Disable Draw Mode" : "Enable Draw Mode"}
-          </button>
     </div>
   );
 });
