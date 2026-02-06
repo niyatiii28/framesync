@@ -49,6 +49,10 @@ const VideoCanvas = forwardRef(function VideoCanvas(
 
       ctx.clearRect(0, 0, canvas.width, canvas.height);
     },
+
+    getCurrentTime() {
+      return videoRef.current?.currentTime ?? 0;
+    },
   }));
 
   // Helper function to draw a single stroke
