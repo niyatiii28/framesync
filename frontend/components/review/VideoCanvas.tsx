@@ -1,19 +1,8 @@
 "use client";
 
 import {useRef, useEffect, useState, forwardRef, useImperativeHandle} from "react";
+import type { FrameAnnotation, Stroke } from "@/types/annotation";
 
-type Point = {x: number; y: number};
-
-type Stroke = {
-  tool: "pen" | "eraser";
-  size: number;
-  points: Point[];
-};  
-
-type FrameAnnotation = {
-  time: number;
-  strokes: Stroke[];
-}
 
 const VideoCanvas = forwardRef(function VideoCanvas(
   {
@@ -21,7 +10,7 @@ const VideoCanvas = forwardRef(function VideoCanvas(
     strokeSize,
     isDrawMode,
     onStrokeComplete,
-    annotations
+    annotations = []
   }: {
     tool: "pen" | "eraser"; 
     strokeSize: number;
@@ -97,7 +86,7 @@ const VideoCanvas = forwardRef(function VideoCanvas(
 
     // Find annotations for current time (within 0.05s tolerance)
     const currentTime = video.currentTime;
-    const relevantAnnotations = annotations.filter(
+    const relevantAnnotations = (annotations ?? []).filter(
       ann => Math.abs(ann.time - currentTime) < 0.05
     );
 
@@ -105,8 +94,7 @@ const VideoCanvas = forwardRef(function VideoCanvas(
 
     // Draw all strokes for current time
     relevantAnnotations.forEach(ann => {
-      ann.strokes.forEach(stroke => {
-        console.log("Drawing stroke:", stroke);
+      ann.strokes.forEach((stroke: Stroke) => {
         drawStroke(ctx, stroke);
       });
     });
