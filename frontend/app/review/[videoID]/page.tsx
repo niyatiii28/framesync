@@ -4,16 +4,31 @@ import { useState } from "react";
 import VideoCanvas from "@/components/review/VideoCanvas";
 import type { FrameAnnotation, Stroke } from "@/types/annotation";
 
+/* =======================
+   TYPES
+======================= */
+
+type Comment = {
+  id: string;
+  time: number;
+  text: string;
+};
+
 type HistoryAction = {
   time: number;
   stroke: Stroke;
 };
+
+/* =======================
+   PAGE
+======================= */
 
 export default function ReviewPage({
   params,
 }: {
   params: { videoId: string };
 }) {
+  /* -------- Drawing State -------- */
   const [tool, setTool] = useState<"pen" | "eraser">("pen");
   const [strokeSize, setStrokeSize] = useState(3);
   const [isDrawMode, setIsDrawMode] = useState(false);
@@ -22,7 +37,24 @@ export default function ReviewPage({
   const [undoStack, setUndoStack] = useState<HistoryAction[]>([]);
   const [redoStack, setRedoStack] = useState<HistoryAction[]>([]);
 
-  /* ---------------- ADD STROKE ---------------- */
+  /* -------- Comments State -------- */
+  const [comments, setComments] = useState<Comment[]>([]);
+  const [commentInput, setCommentInput] = useState("");
+
+  /* -------- Helpers -------- */
+  const getCurrentTime = () => {
+    const video = document.querySelector("video");
+    return video?.currentTime ?? 0;
+  };
+
+  const seekToTime = (time: number) => {
+    const video = document.querySelector("video");
+    if (!video) return;
+    video.currentTime = time;
+    video.pause();
+  };
+
+  /* -------- Add Stroke -------- */
   const addStroke = (stroke: Stroke, time: number) => {
     setAnnotations(prev => {
       const existing = prev.find(a => Math.abs(a.time - time) < 0.05);
@@ -42,7 +74,7 @@ export default function ReviewPage({
     setRedoStack([]);
   };
 
-  /* ---------------- UNDO ---------------- */
+  /* -------- Undo -------- */
   const undo = () => {
     setUndoStack(prev => {
       if (prev.length === 0) return prev;
@@ -62,7 +94,7 @@ export default function ReviewPage({
     });
   };
 
-  /* ---------------- REDO ---------------- */
+  /* -------- Redo -------- */
   const redo = () => {
     setRedoStack(prev => {
       if (prev.length === 0) return prev;
@@ -86,6 +118,24 @@ export default function ReviewPage({
       setUndoStack(u => [...u, last]);
       return prev.slice(0, -1);
     });
+  };
+
+  /* -------- Add Comment -------- */
+  const addComment = () => {
+    if (!commentInput.trim()) return;
+
+    const time = getCurrentTime();
+
+    setComments(prev => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        time,
+        text: commentInput.trim(),
+      },
+    ]);
+
+    setCommentInput("");
   };
 
   return (
@@ -113,12 +163,51 @@ export default function ReviewPage({
           />
         </div>
 
-        {/* Comments */}
-        <div className="w-[320px] border-l border-white/10 bg-[#111111] p-4">
-          <h2 className="text-sm font-medium mb-4">Comments</h2>
-          <p className="text-xs text-gray-500">
-            Comments will appear here
-          </p>
+        {/* Comments Panel */}
+        <div className="w-[320px] border-l border-white/10 bg-[#111111] p-4 flex flex-col">
+
+          <h2 className="text-sm font-medium mb-3">Comments</h2>
+
+          {/* Comment Input */}
+          <div className="mb-4">
+            <textarea
+              value={commentInput}
+              onChange={e => setCommentInput(e.target.value)}
+              placeholder="Add a comment at current time…"
+              className="w-full resize-none rounded bg-[#1a1a1a] border border-white/10 p-2 text-sm"
+              rows={3}
+            />
+            <button
+              onClick={addComment}
+              className="mt-2 w-full py-2 text-sm rounded bg-purple-600 hover:bg-purple-700"
+            >
+              Add Comment
+            </button>
+          </div>
+
+          {/* Comment List */}
+          <div className="flex-1 overflow-y-auto space-y-3">
+            {comments.length === 0 && (
+              <p className="text-xs text-gray-500">
+                No comments yet
+              </p>
+            )}
+
+            {comments.map(comment => (
+              <div
+                key={comment.id}
+                onClick={() => seekToTime(comment.time)}
+                className="cursor-pointer rounded border border-white/10 bg-[#151515] p-2 hover:bg-[#1f1f1f]"
+              >
+                <div className="text-xs text-purple-400 mb-1">
+                  {comment.time.toFixed(2)}s
+                </div>
+                <div className="text-sm">
+                  {comment.text}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -150,10 +239,16 @@ export default function ReviewPage({
 
         {/* Tools */}
         <div className="flex items-center gap-3">
-          <button onClick={() => setTool("pen")} className="px-3 py-2 bg-white/10 rounded">
+          <button
+            onClick={() => setTool("pen")}
+            className="px-3 py-2 bg-white/10 rounded"
+          >
             Pen
           </button>
-          <button onClick={() => setTool("eraser")} className="px-3 py-2 bg-white/10 rounded">
+          <button
+            onClick={() => setTool("eraser")}
+            className="px-3 py-2 bg-white/10 rounded"
+          >
             Eraser
           </button>
 
