@@ -28,16 +28,16 @@ export default function ReviewPage({
 }: {
   params: { videoId: string };
 }) {
-  /* -------- Drawing State -------- */
-  const [tool, setTool] = useState<"pen" | "eraser">("pen");
+  /* -------- Tool State -------- */
+  const [tool, setTool] = useState<"pen" | "eraser" | "highlighter">("pen");
   const [strokeSize, setStrokeSize] = useState(3);
+  const [strokeColor, setStrokeColor] = useState("#ff0000");
   const [isDrawMode, setIsDrawMode] = useState(false);
 
+  /* -------- Data State -------- */
   const [annotations, setAnnotations] = useState<FrameAnnotation[]>([]);
   const [undoStack, setUndoStack] = useState<HistoryAction[]>([]);
   const [redoStack, setRedoStack] = useState<HistoryAction[]>([]);
-
-  /* -------- Comments State -------- */
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentInput, setCommentInput] = useState("");
 
@@ -74,11 +74,10 @@ export default function ReviewPage({
     setRedoStack([]);
   };
 
-  /* -------- Undo -------- */
+  /* -------- Undo / Redo -------- */
   const undo = () => {
     setUndoStack(prev => {
       if (prev.length === 0) return prev;
-
       const last = prev[prev.length - 1];
 
       setAnnotations(ann =>
@@ -94,16 +93,13 @@ export default function ReviewPage({
     });
   };
 
-  /* -------- Redo -------- */
   const redo = () => {
     setRedoStack(prev => {
       if (prev.length === 0) return prev;
-
       const last = prev[prev.length - 1];
 
       setAnnotations(ann => {
         const existing = ann.find(a => Math.abs(a.time - last.time) < 0.05);
-
         if (existing) {
           return ann.map(a =>
             a === existing
@@ -111,7 +107,6 @@ export default function ReviewPage({
               : a
           );
         }
-
         return [...ann, { time: last.time, strokes: [last.stroke] }];
       });
 
@@ -123,16 +118,11 @@ export default function ReviewPage({
   /* -------- Add Comment -------- */
   const addComment = () => {
     if (!commentInput.trim()) return;
-
     const time = getCurrentTime();
 
     setComments(prev => [
       ...prev,
-      {
-        id: crypto.randomUUID(),
-        time,
-        text: commentInput.trim(),
-      },
+      { id: crypto.randomUUID(), time, text: commentInput.trim() },
     ]);
 
     setCommentInput("");
@@ -152,59 +142,48 @@ export default function ReviewPage({
       {/* Main */}
       <div className="flex flex-1 overflow-hidden">
 
-        {/* Video + Canvas */}
+        {/* Video */}
         <div className="flex-1 flex items-center justify-center bg-black">
           <VideoCanvas
             tool={tool}
             strokeSize={strokeSize}
-            isDrawMode={isDrawMode}
+            strokeColor={strokeColor}
             annotations={annotations}
+            isDrawMode={isDrawMode}
             onStrokeComplete={addStroke}
           />
         </div>
 
-        {/* Comments Panel */}
+        {/* Comments */}
         <div className="w-[320px] border-l border-white/10 bg-[#111111] p-4 flex flex-col">
-
           <h2 className="text-sm font-medium mb-3">Comments</h2>
 
-          {/* Comment Input */}
-          <div className="mb-4">
-            <textarea
-              value={commentInput}
-              onChange={e => setCommentInput(e.target.value)}
-              placeholder="Add a comment at current time…"
-              className="w-full resize-none rounded bg-[#1a1a1a] border border-white/10 p-2 text-sm"
-              rows={3}
-            />
-            <button
-              onClick={addComment}
-              className="mt-2 w-full py-2 text-sm rounded bg-purple-600 hover:bg-purple-700"
-            >
-              Add Comment
-            </button>
-          </div>
+          <textarea
+            value={commentInput}
+            onChange={e => setCommentInput(e.target.value)}
+            placeholder="Add comment…"
+            className="mb-2 resize-none rounded bg-[#1a1a1a] border border-white/10 p-2 text-sm"
+            rows={3}
+          />
 
-          {/* Comment List */}
-          <div className="flex-1 overflow-y-auto space-y-3">
-            {comments.length === 0 && (
-              <p className="text-xs text-gray-500">
-                No comments yet
-              </p>
-            )}
+          <button
+            onClick={addComment}
+            className="mb-4 py-2 text-sm rounded bg-purple-600"
+          >
+            Add Comment
+          </button>
 
-            {comments.map(comment => (
+          <div className="flex-1 overflow-y-auto space-y-2">
+            {comments.map(c => (
               <div
-                key={comment.id}
-                onClick={() => seekToTime(comment.time)}
-                className="cursor-pointer rounded border border-white/10 bg-[#151515] p-2 hover:bg-[#1f1f1f]"
+                key={c.id}
+                onClick={() => seekToTime(c.time)}
+                className="cursor-pointer rounded bg-[#151515] p-2 hover:bg-[#1f1f1f]"
               >
-                <div className="text-xs text-purple-400 mb-1">
-                  {comment.time.toFixed(2)}s
+                <div className="text-xs text-purple-400">
+                  {c.time.toFixed(2)}s
                 </div>
-                <div className="text-sm">
-                  {comment.text}
-                </div>
+                <div className="text-sm">{c.text}</div>
               </div>
             ))}
           </div>
@@ -239,18 +218,21 @@ export default function ReviewPage({
 
         {/* Tools */}
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => setTool("pen")}
-            className="px-3 py-2 bg-white/10 rounded"
-          >
+          <button onClick={() => setTool("pen")} className="px-3 py-2 bg-white/10 rounded">
             Pen
           </button>
-          <button
-            onClick={() => setTool("eraser")}
-            className="px-3 py-2 bg-white/10 rounded"
-          >
+          <button onClick={() => setTool("highlighter")} className="px-3 py-2 bg-white/10 rounded">
+            Highlight
+          </button>
+          <button onClick={() => setTool("eraser")} className="px-3 py-2 bg-white/10 rounded">
             Eraser
           </button>
+
+          <input
+            type="color"
+            value={strokeColor}
+            onChange={e => setStrokeColor(e.target.value)}
+          />
 
           <input
             type="range"

@@ -4,8 +4,9 @@ import { useRef, useEffect } from "react";
 import type { FrameAnnotation, Stroke } from "@/types/annotation";
 
 type Props = {
-  tool: "pen" | "eraser";
+  tool: "pen" | "eraser" | "highlighter";
   strokeSize: number;
+  strokeColor: string;
   isDrawMode: boolean;
   annotations: FrameAnnotation[];
   onStrokeComplete: (stroke: Stroke, time: number) => void;
@@ -14,6 +15,7 @@ type Props = {
 export default function VideoCanvas({
   tool,
   strokeSize,
+  strokeColor,
   isDrawMode,
   annotations,
   onStrokeComplete,
@@ -26,7 +28,9 @@ export default function VideoCanvas({
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
   const currentStrokeRef = useRef<Stroke | null>(null);
 
-  /* ---------------- SETUP CANVAS ---------------- */
+  /* =======================
+     CANVAS SETUP
+  ======================= */
   useEffect(() => {
     const canvas = canvasRef.current;
     const video = videoRef.current;
@@ -43,13 +47,16 @@ export default function VideoCanvas({
     const ctx = canvas.getContext("2d");
     if (ctx) {
       ctx.lineCap = "round";
+      ctx.lineJoin = "round";
       ctxRef.current = ctx;
     }
 
     return () => window.removeEventListener("resize", resize);
   }, []);
 
-  /* ---------------- REDRAW ALL ANNOTATIONS ---------------- */
+  /* =======================
+     REDRAW ALL ANNOTATIONS
+  ======================= */
   const redrawAll = () => {
     const ctx = ctxRef.current;
     const canvas = canvasRef.current;
@@ -62,27 +69,37 @@ export default function VideoCanvas({
       .filter(a => Math.abs(a.time - video.currentTime) < 0.05)
       .forEach(a => {
         a.strokes.forEach(stroke => {
+          ctx.save();
+
           ctx.lineWidth = stroke.size;
-          ctx.strokeStyle = stroke.tool === "pen" ? "red" : "rgba(0,0,0,1)";
-          ctx.globalCompositeOperation =
-            stroke.tool === "pen" ? "source-over" : "destination-out";
+          ctx.strokeStyle = stroke.color ?? "red";
+          ctx.globalAlpha = stroke.opacity ?? 1;
+
+          if (stroke.tool === "eraser") {
+            ctx.globalCompositeOperation = "destination-out";
+          } else {
+            ctx.globalCompositeOperation = "source-over";
+          }
 
           ctx.beginPath();
           stroke.points.forEach((p, i) =>
             i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)
           );
           ctx.stroke();
+
+          ctx.restore();
         });
       });
   };
 
-  /* 🔥 THIS IS THE FIX 🔥
-     Redraw whenever annotations change */
+  /* 🔥 redraw on annotations change (undo/redo fix) */
   useEffect(() => {
     redrawAll();
   }, [annotations]);
 
-  /* ---------------- DRAWING ---------------- */
+  /* =======================
+     DRAWING HANDLERS
+  ======================= */
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawMode || !ctxRef.current) return;
 
@@ -95,15 +112,24 @@ export default function VideoCanvas({
     isDrawingRef.current = true;
     lastPointRef.current = { x, y };
 
+    const isHighlighter = tool === "highlighter";
+
     currentStrokeRef.current = {
-      tool,
-      size: strokeSize,
+      tool: tool === "highlighter" ? "pen" : tool,
+      size: isHighlighter ? strokeSize * 2 : strokeSize,
+      color: strokeColor,
+      opacity: isHighlighter ? 0.3 : 1,
       points: [{ x, y }],
     };
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawingRef.current || !ctxRef.current || !lastPointRef.current)
+    if (
+      !isDrawingRef.current ||
+      !ctxRef.current ||
+      !lastPointRef.current ||
+      !currentStrokeRef.current
+    )
       return;
 
     const rect = canvasRef.current!.getBoundingClientRect();
@@ -111,17 +137,28 @@ export default function VideoCanvas({
     const y = e.clientY - rect.top;
 
     const ctx = ctxRef.current;
-    ctx.lineWidth = strokeSize;
-    ctx.strokeStyle = tool === "pen" ? "red" : "rgba(0,0,0,1)";
-    ctx.globalCompositeOperation =
-      tool === "pen" ? "source-over" : "destination-out";
+    const stroke = currentStrokeRef.current;
+
+    ctx.save();
+
+    ctx.lineWidth = stroke.size;
+    ctx.strokeStyle = stroke.color;
+    ctx.globalAlpha = stroke.opacity ?? 1;
+
+    if (stroke.tool === "eraser") {
+      ctx.globalCompositeOperation = "destination-out";
+    } else {
+      ctx.globalCompositeOperation = "source-over";
+    }
 
     ctx.beginPath();
     ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y);
     ctx.lineTo(x, y);
     ctx.stroke();
 
-    currentStrokeRef.current?.points.push({ x, y });
+    ctx.restore();
+
+    stroke.points.push({ x, y });
     lastPointRef.current = { x, y };
   };
 
