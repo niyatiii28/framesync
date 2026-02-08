@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import VideoCanvas from "@/components/review/VideoCanvas";
 import type { FrameAnnotation, Stroke } from "@/types/annotation";
 
@@ -29,7 +29,10 @@ export default function ReviewPage({
   params: { videoId: string };
 }) {
   /* -------- Tool State -------- */
-  const [tool, setTool] = useState<"pen" | "eraser" | "highlighter">("pen");
+  const [tool, setTool] = useState<
+    "pen" | "eraser" | "highlighter" | "rect" | "arrow"
+  >("pen");
+
   const [strokeSize, setStrokeSize] = useState(3);
   const [strokeColor, setStrokeColor] = useState("#ff0000");
   const [isDrawMode, setIsDrawMode] = useState(false);
@@ -41,20 +44,39 @@ export default function ReviewPage({
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentInput, setCommentInput] = useState("");
 
-  /* -------- Helpers -------- */
+  /* =======================
+     VIDEO HELPERS
+  ======================= */
+
+  const getVideo = () =>
+    document.querySelector("video") as HTMLVideoElement | null;
+
   const getCurrentTime = () => {
-    const video = document.querySelector("video");
+    const video = getVideo();
     return video?.currentTime ?? 0;
   };
 
-  const seekToTime = (time: number) => {
-    const video = document.querySelector("video");
+  const togglePlay = () => {
+    const video = getVideo();
     if (!video) return;
-    video.currentTime = time;
-    video.pause();
+    video.paused ? video.play() : video.pause();
   };
 
-  /* -------- Add Stroke -------- */
+  const seekToTime = (time: number) => {
+    const video = getVideo();
+    if (!video) return;
+
+    video.pause();
+    video.currentTime = time;
+
+    // 🔥 force canvas redraw
+    video.dispatchEvent(new Event("seeked"));
+  };
+
+  /* =======================
+     ANNOTATIONS
+  ======================= */
+
   const addStroke = (stroke: Stroke, time: number) => {
     setAnnotations(prev => {
       const existing = prev.find(a => Math.abs(a.time - time) < 0.05);
@@ -74,7 +96,6 @@ export default function ReviewPage({
     setRedoStack([]);
   };
 
-  /* -------- Undo / Redo -------- */
   const undo = () => {
     setUndoStack(prev => {
       if (prev.length === 0) return prev;
@@ -115,18 +136,67 @@ export default function ReviewPage({
     });
   };
 
-  /* -------- Add Comment -------- */
+  /* =======================
+     COMMENTS
+  ======================= */
+
   const addComment = () => {
     if (!commentInput.trim()) return;
-    const time = getCurrentTime();
 
     setComments(prev => [
       ...prev,
-      { id: crypto.randomUUID(), time, text: commentInput.trim() },
+      {
+        id: crypto.randomUUID(),
+        time: getCurrentTime(),
+        text: commentInput.trim(),
+      },
     ]);
 
     setCommentInput("");
   };
+
+  /* =======================
+     GLOBAL SHORTCUTS
+  ======================= */
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+
+      if (
+        target.tagName === "INPUT" ||
+        target.tagName === "TEXTAREA" ||
+        target.isContentEditable
+      )
+        return;
+
+      if (e.code === "Space") {
+        e.preventDefault();
+        togglePlay();
+      }
+
+      if (e.code === "Escape") {
+        setIsDrawMode(false);
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+        e.preventDefault();
+        undo();
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.key === "y") {
+        e.preventDefault();
+        redo();
+      }
+    };
+
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [undo, redo]);
+
+  /* =======================
+     UI
+  ======================= */
 
   return (
     <div className="h-screen bg-[#0f0f0f] flex flex-col">
@@ -148,8 +218,8 @@ export default function ReviewPage({
             tool={tool}
             strokeSize={strokeSize}
             strokeColor={strokeColor}
-            annotations={annotations}
             isDrawMode={isDrawMode}
+            annotations={annotations}
             onStrokeComplete={addStroke}
           />
         </div>
@@ -192,23 +262,17 @@ export default function ReviewPage({
 
       {/* Bottom Toolbar */}
       <div className="h-20 border-t border-white/10 bg-[#0b0b0b] px-6 flex items-center justify-between">
-
-        {/* Playback */}
         <div className="flex gap-3">
           <button
-            onClick={() => {
-              const video = document.querySelector("video");
-              if (!video) return;
-              video.paused ? video.play() : video.pause();
-            }}
-            className="px-4 py-2 text-sm rounded bg-white/10"
+            onClick={togglePlay}
+            className="px-4 py-2 bg-white/10 rounded"
           >
             Play / Pause
           </button>
 
           <button
             onClick={() => setIsDrawMode(p => !p)}
-            className={`px-4 py-2 text-sm rounded ${
+            className={`px-4 py-2 rounded ${
               isDrawMode ? "bg-purple-600" : "bg-white/10"
             }`}
           >
@@ -216,42 +280,20 @@ export default function ReviewPage({
           </button>
         </div>
 
-        {/* Tools */}
-        <div className="flex items-center gap-3">
-          <button onClick={() => setTool("pen")} className="px-3 py-2 bg-white/10 rounded">
-            Pen
-          </button>
-          <button onClick={() => setTool("highlighter")} className="px-3 py-2 bg-white/10 rounded">
-            Highlight
-          </button>
-          <button onClick={() => setTool("eraser")} className="px-3 py-2 bg-white/10 rounded">
-            Eraser
-          </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setTool("pen")} className="bg-white/10 px-3 py-2 rounded">Pen</button>
+          <button onClick={() => setTool("highlighter")} className="bg-white/10 px-3 py-2 rounded">Highlight</button>
+          <button onClick={() => setTool("rect")} className="bg-white/10 px-3 py-2 rounded">Rect</button>
+          <button onClick={() => setTool("arrow")} className="bg-white/10 px-3 py-2 rounded">Arrow</button>
+          <button onClick={() => setTool("eraser")} className="bg-white/10 px-3 py-2 rounded">Eraser</button>
 
-          <input
-            type="color"
-            value={strokeColor}
-            onChange={e => setStrokeColor(e.target.value)}
-          />
-
-          <input
-            type="range"
-            min={1}
-            max={20}
-            value={strokeSize}
-            onChange={e => setStrokeSize(+e.target.value)}
-            className="w-28"
-          />
+          <input type="color" value={strokeColor} onChange={e => setStrokeColor(e.target.value)} />
+          <input type="range" min={1} max={20} value={strokeSize} onChange={e => setStrokeSize(+e.target.value)} />
         </div>
 
-        {/* Undo / Redo */}
         <div className="flex gap-2">
-          <button onClick={undo} className="px-3 py-2 bg-white/10 rounded">
-            Undo
-          </button>
-          <button onClick={redo} className="px-3 py-2 bg-white/10 rounded">
-            Redo
-          </button>
+          <button onClick={undo} className="bg-white/10 px-3 py-2 rounded">Undo</button>
+          <button onClick={redo} className="bg-white/10 px-3 py-2 rounded">Redo</button>
         </div>
       </div>
     </div>

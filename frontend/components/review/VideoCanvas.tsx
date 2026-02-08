@@ -1,10 +1,10 @@
 "use client";
 
 import { useRef, useEffect } from "react";
-import type { FrameAnnotation, Stroke } from "@/types/annotation";
+import type { FrameAnnotation, Stroke, Point } from "@/types/annotation";
 
 type Props = {
-  tool: "pen" | "eraser" | "highlighter";
+  tool: "pen" | "eraser" | "highlighter" | "rect" | "arrow";
   strokeSize: number;
   strokeColor: string;
   isDrawMode: boolean;
@@ -25,12 +25,9 @@ export default function VideoCanvas({
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
 
   const isDrawingRef = useRef(false);
-  const lastPointRef = useRef<{ x: number; y: number } | null>(null);
   const currentStrokeRef = useRef<Stroke | null>(null);
 
-  /* =======================
-     CANVAS SETUP
-  ======================= */
+  /* ---------- Setup ---------- */
   useEffect(() => {
     const canvas = canvasRef.current;
     const video = videoRef.current;
@@ -43,21 +40,38 @@ export default function VideoCanvas({
 
     resize();
     window.addEventListener("resize", resize);
-
-    const ctx = canvas.getContext("2d");
-    if (ctx) {
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-      ctxRef.current = ctx;
-    }
+    ctxRef.current = canvas.getContext("2d");
 
     return () => window.removeEventListener("resize", resize);
   }, []);
 
-  /* =======================
-     REDRAW ALL ANNOTATIONS
-  ======================= */
-  const redrawAll = () => {
+  /* ---------- Draw helpers ---------- */
+  const drawStroke = (ctx: CanvasRenderingContext2D, stroke: Stroke) => {
+    ctx.save();
+    ctx.lineWidth = stroke.size;
+    ctx.strokeStyle = stroke.color;
+    ctx.globalAlpha = stroke.opacity;
+
+    ctx.globalCompositeOperation =
+      stroke.tool === "eraser" ? "destination-out" : "source-over";
+
+    if (stroke.tool === "rect") {
+      const [a, b] = stroke.points;
+      ctx.strokeRect(a.x, a.y, b.x - a.x, b.y - a.y);
+    } else if (stroke.tool === "arrow") {
+      drawArrow(ctx, stroke.points[0], stroke.points[1]);
+    } else {
+      ctx.beginPath();
+      stroke.points.forEach((p, i) =>
+        i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)
+      );
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  };
+
+  const redraw = () => {
     const ctx = ctxRef.current;
     const canvas = canvasRef.current;
     const video = videoRef.current;
@@ -65,108 +79,67 @@ export default function VideoCanvas({
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // draw saved annotations
     annotations
       .filter(a => Math.abs(a.time - video.currentTime) < 0.05)
-      .forEach(a => {
-        a.strokes.forEach(stroke => {
-          ctx.save();
+      .forEach(a => a.strokes.forEach(s => drawStroke(ctx, s)));
 
-          ctx.lineWidth = stroke.size;
-          ctx.strokeStyle = stroke.color ?? "red";
-          ctx.globalAlpha = stroke.opacity ?? 1;
-
-          if (stroke.tool === "eraser") {
-            ctx.globalCompositeOperation = "destination-out";
-          } else {
-            ctx.globalCompositeOperation = "source-over";
-          }
-
-          ctx.beginPath();
-          stroke.points.forEach((p, i) =>
-            i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)
-          );
-          ctx.stroke();
-
-          ctx.restore();
-        });
-      });
+    // draw current stroke preview
+    if (currentStrokeRef.current) {
+      drawStroke(ctx, currentStrokeRef.current);
+    }
   };
 
-  /* 🔥 redraw on annotations change (undo/redo fix) */
   useEffect(() => {
-    redrawAll();
+    redraw();
   }, [annotations]);
 
-  /* =======================
-     DRAWING HANDLERS
-  ======================= */
+  /* ---------- Drawing ---------- */
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawMode || !ctxRef.current) return;
-
     videoRef.current?.pause();
 
     const rect = canvasRef.current!.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const start: Point = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    };
 
     isDrawingRef.current = true;
-    lastPointRef.current = { x, y };
-
-    const isHighlighter = tool === "highlighter";
 
     currentStrokeRef.current = {
       tool: tool === "highlighter" ? "pen" : tool,
-      size: isHighlighter ? strokeSize * 2 : strokeSize,
+      size: tool === "highlighter" ? strokeSize * 2 : strokeSize,
       color: strokeColor,
-      opacity: isHighlighter ? 0.3 : 1,
-      points: [{ x, y }],
+      opacity: tool === "highlighter" ? 0.3 : 1,
+      points: [start, start],
     };
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (
-      !isDrawingRef.current ||
-      !ctxRef.current ||
-      !lastPointRef.current ||
-      !currentStrokeRef.current
-    )
-      return;
+    if (!isDrawingRef.current || !currentStrokeRef.current) return;
 
     const rect = canvasRef.current!.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    const end: Point = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    };
 
-    const ctx = ctxRef.current;
     const stroke = currentStrokeRef.current;
 
-    ctx.save();
-
-    ctx.lineWidth = stroke.size;
-    ctx.strokeStyle = stroke.color;
-    ctx.globalAlpha = stroke.opacity ?? 1;
-
-    if (stroke.tool === "eraser") {
-      ctx.globalCompositeOperation = "destination-out";
+    if (stroke.tool === "rect" || stroke.tool === "arrow") {
+      stroke.points[1] = end;
     } else {
-      ctx.globalCompositeOperation = "source-over";
+      stroke.points.push(end);
     }
 
-    ctx.beginPath();
-    ctx.moveTo(lastPointRef.current.x, lastPointRef.current.y);
-    ctx.lineTo(x, y);
-    ctx.stroke();
-
-    ctx.restore();
-
-    stroke.points.push({ x, y });
-    lastPointRef.current = { x, y };
+    redraw();
   };
 
   const stopDrawing = () => {
     if (!isDrawingRef.current || !currentStrokeRef.current) return;
 
     isDrawingRef.current = false;
-    lastPointRef.current = null;
 
     onStrokeComplete(
       currentStrokeRef.current,
@@ -183,8 +156,8 @@ export default function VideoCanvas({
         src="/random.mp4"
         controls
         className="w-full h-full"
-        onTimeUpdate={redrawAll}
-        onSeeked={redrawAll}
+        onTimeUpdate={redraw}
+        onSeeked={redraw}
       />
 
       <canvas
@@ -198,4 +171,32 @@ export default function VideoCanvas({
       />
     </div>
   );
+}
+
+/* ---------- Arrow ---------- */
+function drawArrow(
+  ctx: CanvasRenderingContext2D,
+  from: Point,
+  to: Point
+) {
+  const head = 10;
+  const angle = Math.atan2(to.y - from.y, to.x - from.x);
+
+  ctx.beginPath();
+  ctx.moveTo(from.x, from.y);
+  ctx.lineTo(to.x, to.y);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(to.x, to.y);
+  ctx.lineTo(
+    to.x - head * Math.cos(angle - Math.PI / 6),
+    to.y - head * Math.sin(angle - Math.PI / 6)
+  );
+  ctx.lineTo(
+    to.x - head * Math.cos(angle + Math.PI / 6),
+    to.y - head * Math.sin(angle + Math.PI / 6)
+  );
+  ctx.closePath();
+  ctx.fill();
 }
