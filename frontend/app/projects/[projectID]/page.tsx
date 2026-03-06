@@ -1,28 +1,25 @@
-import VideoCard from "@/components/project/VideoCard";
+"use client";
 
-const videos = [
-  {
-    id: "v1",
-    title: "Product Demo Final",
-    duration: "02:34",
-  },
-  {
-    id: "v2",
-    title: "Instagram Cut",
-    duration: "00:45",
-  },
-  {
-    id: "v3",
-    title: "YouTube Long Version",
-    duration: "05:12",
-  },
-];
+import { useEffect, useState } from "react";
+import { use } from "react";
+import VideoCard from "@/components/project/VideoCard";
 
 export default function ProjectPage({
   params,
 }: {
-  params: { projectId: string };
+  params: Promise<{ projectID: string }>;
 }) {
+  const { projectID } = use(params);
+
+  const [videos, setVideos] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch(`http://localhost:4000/videos/project/${projectID}`)
+      .then(res => res.json())
+      .then(data => setVideos(data))
+      .catch(err => console.error(err));
+  }, [projectID]);
+
   return (
     <div className="min-h-screen bg-[#0f0f0f] px-8 py-6">
       <h1 className="text-2xl font-semibold mb-1">
@@ -30,11 +27,11 @@ export default function ProjectPage({
       </h1>
 
       <p className="text-sm text-gray-400 mb-6">
-        Project ID: {params.projectId}
+        Project ID: {projectID}
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {videos.map(video => (
+        {videos.map((video) => (
           <VideoCard
             key={video.id}
             title={video.title}

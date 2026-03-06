@@ -32,6 +32,7 @@ model Video {
   project   Project  @relation(fields: [projectId], references: [id])
   annotations Annotation[]
   comments    Comment[]
+  createdAt   DateTime @default(now())
 }
 
 model Annotation {
