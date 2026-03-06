@@ -1,0 +1,54 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  createdAt DateTime @default(now())
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  ownerId     String
+  videos      Video[]
+  createdAt   DateTime @default(now())
+}
+
+model Video {
+  id        String   @id @default(uuid())
+  title     String
+  url       String
+  duration  Float
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  annotations Annotation[]
+  comments    Comment[]
+}
+
+model Annotation {
+  id        String   @id @default(uuid())
+  videoId   String
+  video     Video    @relation(fields: [videoId], references: [id])
+  time      Float
+  strokes   Json
+  color     String
+  createdAt DateTime @default(now())
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  videoId   String
+  video     Video    @relation(fields: [videoId], references: [id])
+  time      Float
+  text      String
+  createdAt DateTime @default(now())
+}

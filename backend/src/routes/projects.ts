@@ -1,0 +1,37 @@
+import { Router } from "express";
+import prisma from "../prisma";
+
+const router = Router();
+
+// GET all projects
+router.get("/", async (req, res) => {
+  try {
+    const projects = await prisma.project.findMany();
+    res.json(projects);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch projects" });
+  }
+});
+
+// CREATE project
+router.post("/", async (req, res) => {
+  try {
+    const { name, description, ownerId } = req.body;
+
+    const project = await prisma.project.create({
+      data: {
+        name,
+        description,
+        ownerId,
+      },
+    });
+
+    res.json(project);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to create project" });
+  }
+});
+
+export default router;
