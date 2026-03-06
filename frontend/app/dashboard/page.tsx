@@ -53,6 +53,7 @@ export default function DashboardPage() {
         {projects.map((project, index) => (
           <ProjectCard
             key={project.id || index}
+            id={project.id}
             name={project.name}
             description={project.description}
             videoCount={project.videos?.length || 0}
