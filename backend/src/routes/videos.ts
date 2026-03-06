@@ -23,6 +23,22 @@ router.get("/project/:projectId", async (req, res) => {
   }
 });
 
+// GET single video
+router.get("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const video = await prisma.video.findUnique({
+      where: { id },
+    });
+
+    res.json(video);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch video" });
+  }
+});
+
 /*
 CREATE video
 POST /videos

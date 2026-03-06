@@ -124,6 +124,7 @@ export default function ProjectPage({
         {videos.map((video) => (
           <VideoCard
             key={video.id}
+            id={video.id}
             title={video.title}
             duration={video.duration}
           />

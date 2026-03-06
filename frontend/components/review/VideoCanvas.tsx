@@ -4,6 +4,7 @@ import { useRef, useEffect } from "react";
 import type { FrameAnnotation, Stroke, Point } from "@/types/annotation";
 
 type Props = {
+  videoUrl?: string
   tool: "pen" | "eraser" | "highlighter" | "rect" | "arrow";
   strokeSize: number;
   strokeColor: string;
@@ -13,6 +14,7 @@ type Props = {
 };
 
 export default function VideoCanvas({
+  videoUrl,
   tool,
   strokeSize,
   strokeColor,
@@ -153,7 +155,7 @@ export default function VideoCanvas({
     <div className="relative w-[900px] h-[500px]">
       <video
         ref={videoRef}
-        src="/random.mp4"
+        src={videoUrl}
         controls
         className="w-full h-full"
         onTimeUpdate={redraw}
