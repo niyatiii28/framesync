@@ -39,6 +39,21 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+router.get("/:videoId", async (req, res) => {
+  try {
+    const { videoId } = req.params;
+
+    const video = await prisma.video.findUnique({
+      where: { id: videoId },
+    });
+
+    res.json(video);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Failed to fetch video" });
+  }
+});
+
 /*
 CREATE video
 POST /videos

@@ -6,6 +6,7 @@ import videosRoutes from "./routes/videos";
 import commentsRoutes from "./routes/comments";
 import annotationsRoutes from "./routes/annotations";
 import videoRoutes from "./routes/videos";
+import annotationRoutes from "./routes/annotations";
 
 dotenv.config();
 
@@ -22,6 +23,7 @@ app.use("/videos", videosRoutes);
 app.use("/comments", commentsRoutes);
 app.use("/annotations", annotationsRoutes);
 app.use("/videos", videoRoutes);
+app.use("/annotations", annotationRoutes);
 
 /* ======================
    ROUTES

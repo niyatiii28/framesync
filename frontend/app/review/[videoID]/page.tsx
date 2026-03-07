@@ -46,10 +46,18 @@ export default function ReviewPage({
   const [video, setVideo] = useState<any>(null);
 
   useEffect(() => {
+    /* LOAD VIDEO */
     fetch(`http://localhost:4000/videos/${params.videoId}`)
       .then(res => res.json())
       .then(data => setVideo(data))
       .catch(err => console.error(err));
+
+    /* LOAD ANNOTATIONS */
+    fetch(`http://localhost:4000/annotations/${params.videoId}`)
+      .then(res => res.json())
+      .then(data => setAnnotations(data))
+      .catch(err => console.error(err));
+
   }, [params.videoId]);
 
   /* =======================
@@ -89,6 +97,7 @@ export default function ReviewPage({
   ======================= */
 
   const addStroke = (stroke: Stroke, time: number) => {
+
     setAnnotations(prev => {
       const existing = prev.find(a => Math.abs(a.time - time) < 0.05);
 
@@ -105,6 +114,19 @@ export default function ReviewPage({
 
     setUndoStack(prev => [...prev, { time, stroke }]);
     setRedoStack([]);
+
+    fetch("http://localhost:4000/annotations", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        videoId: params.videoId,
+        time,
+        strokes: [stroke],
+        color: strokeColor,
+      }),
+    }).catch(err => console.error(err));
   };
 
   const undo = () => {
@@ -244,10 +266,10 @@ export default function ReviewPage({
         {/* VIDEO AREA */}
         <div className="flex-1 flex flex-col items-center justify-center p-10">
 
+          {/* Video */}
           <div className="w-full max-w-[1100px] rounded-2xl overflow-hidden border border-white/10 bg-black shadow-2xl">
-
             <VideoCanvas
-              videoUrl={video?.url}
+              videoUrl="https://www.w3schools.com/html/mov_bbb.mp4"
               tool={tool}
               strokeSize={strokeSize}
               strokeColor={strokeColor}
@@ -255,6 +277,27 @@ export default function ReviewPage({
               annotations={annotations}
               onStrokeComplete={addStroke}
             />
+          </div>
+
+          {/* Timeline */}
+          <div className="w-full max-w-[1100px] mt-4">
+
+            <div className="relative h-2 bg-[#141414] rounded">
+
+              {comments.map(c => (
+                <div
+                  key={c.id}
+                  onClick={() => seekToTime(c.time)}
+                  className="absolute w-3 h-3 bg-purple-500 rounded-full cursor-pointer hover:scale-125 transition"
+                  style={{
+                    left: `${(c.time / 20) * 100}%`,
+                    top: "-4px",
+                  }}
+                />
+
+              ))}
+
+            </div>
 
           </div>
 

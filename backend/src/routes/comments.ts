@@ -3,35 +3,49 @@ import prisma from "../prisma";
 
 const router = Router();
 
-/* Create Comment */
+/* =========================
+CREATE COMMENT
+========================= */
+
 router.post("/", async (req, res) => {
   try {
-    const { videoId, text, time } = req.body;
+    const { videoId, time, text } = req.body as {
+      videoId: string;
+      time: number;
+      text: string;
+    };
 
-    const comment = await prisma.comment.create({
+    const newComment = await prisma.comment.create({
       data: {
         videoId,
-        text,
         time,
+        text,
       },
     });
 
-    res.json(comment);
-  } catch {
+    res.json(newComment);
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Failed to create comment" });
   }
 });
 
-/* Get comments for video */
+/* =========================
+GET COMMENTS FOR VIDEO
+========================= */
+
 router.get("/:videoId", async (req, res) => {
   try {
+    const { videoId } = req.params as { videoId: string };
+
     const comments = await prisma.comment.findMany({
-      where: { videoId: req.params.videoId },
+      where: { videoId },
       orderBy: { time: "asc" },
     });
 
     res.json(comments);
-  } catch {
+  } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Failed to fetch comments" });
   }
 });
