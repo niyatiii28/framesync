@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
-import VideoCanvas from "@/components/review/VideoCanvas";
+import { useEffect, useState, useRef, use } from "react";
 import type { FrameAnnotation, Stroke } from "@/types/annotation";
-import { Play, Pen, Highlighter, Square, ArrowUpRight, Eraser, Undo, Redo, Share2, Download, MessageSquare } from "lucide-react";
+import { Play, Pen, Highlighter, Square, ArrowUpRight, Eraser, Undo, Redo, Share2, Download, MessageSquare, Pause, ArrowLeft } from "lucide-react";
+import VideoCanvas from "@/components/review/VideoCanvas";
+import { apiFetch } from "@/lib/api";
 
 /* =======================
    TYPES
@@ -61,21 +62,24 @@ export default function ReviewPage({
   };
 
   useEffect(() => {
-    /* LOAD VIDEO */
-    fetch(`http://localhost:4000/videos/${videoID}`)
-      .then(res => res.json())
+    // 1. Fetch video details
+    apiFetch(`http://localhost:4000/videos/${videoID}`)
       .then(data => setVideo(data))
       .catch(err => console.error(err));
 
-    /* LOAD ANNOTATIONS */
-    fetch(`http://localhost:4000/annotations/${videoID}`)
-      .then(res => res.json())
-      .then(data => setAnnotations(data))
+    // 2. Fetch annotations
+    apiFetch(`http://localhost:4000/annotations/${videoID}`)
+      .then(data => {
+        const parsed = data.map((a: any) => ({
+          ...a,
+          strokes: typeof a.strokes === "string" ? JSON.parse(a.strokes) : a.strokes,
+        }));
+        setAnnotations(parsed);
+      })
       .catch(err => console.error(err));
 
-    /* LOAD COMMENTS */
-    fetch(`http://localhost:4000/comments/${videoID}`)
-      .then(res => res.json())
+    // 3. Fetch comments
+    apiFetch(`http://localhost:4000/comments/${videoID}`)
       .then(data => setComments(data))
       .catch(err => console.error(err));
 
@@ -156,16 +160,13 @@ export default function ReviewPage({
     setUndoStack(prev => [...prev, { time, stroke }]);
     setRedoStack([]);
 
-    fetch("http://localhost:4000/annotations", {
+    apiFetch("http://localhost:4000/annotations", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
       body: JSON.stringify({
         videoId: videoID,
         time,
         strokes: [stroke],
-        color: strokeColor,
+        color: stroke.color,
       }),
     }).catch(err => console.error(err));
   };
@@ -252,9 +253,8 @@ export default function ReviewPage({
     setCommentInput("");
     setPendingCommentPos(null);
 
-    fetch("http://localhost:4000/comments", {
+    apiFetch("http://localhost:4000/comments", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         videoId: videoID,
         time,

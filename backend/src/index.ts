@@ -8,6 +8,7 @@ import annotationsRoutes from "./routes/annotations";
 import videoRoutes from "./routes/videos";
 import annotationRoutes from "./routes/annotations";
 import authRoutes from "./routes/auth";
+import uploadRoutes from "./routes/upload";
 
 dotenv.config();
 
@@ -26,6 +27,7 @@ app.use("/annotations", annotationsRoutes);
 app.use("/videos", videoRoutes);
 app.use("/annotations", annotationRoutes);
 app.use("/auth", authRoutes);
+app.use("/upload", uploadRoutes);
 
 /* ======================
    ROUTES

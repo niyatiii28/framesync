@@ -4,6 +4,7 @@ import { useEffect, useState, use } from "react";
 import VideoCard from "@/components/project/VideoCard";
 import { Plus, X, Video, PlaySquare, ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { apiFetch } from "@/lib/api";
 
 export default function ProjectPage({
   params,
@@ -19,35 +20,29 @@ export default function ProjectPage({
   const [duration, setDuration] = useState("");
 
   const createVideo = async () => {
-  try {
-    const res = await fetch("http://localhost:4000/videos", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        title,
-        url,
-        duration: Number(duration),
-        projectId: projectID,
-      }),
-    });
+    try {
+      const newVideo = await apiFetch("http://localhost:4000/videos", {
+        method: "POST",
+        body: JSON.stringify({
+          title,
+          url,
+          duration: Number(duration),
+          projectId: projectID,
+        }),
+      });
 
-    const newVideo = await res.json();
+      setVideos((prev) => [newVideo, ...prev]);
 
-    setVideos((prev) => [newVideo, ...prev]);
-
-    setTitle("");
-    setUrl("");
-    setDuration("");
-    setShowUpload(false);
-  } catch (error) {
-    console.error(error);
-  }
-};
+      setTitle("");
+      setUrl("");
+      setDuration("");
+      setShowUpload(false);
+    } catch (error) {
+      console.error(error);
+    }
+  };
   useEffect(() => {
-    fetch(`http://localhost:4000/videos/project/${projectID}`)
-      .then(res => res.json())
+    apiFetch(`http://localhost:4000/videos/project/${projectID}`)
       .then(data => setVideos(data))
       .catch(err => console.error(err));
   }, [projectID]);

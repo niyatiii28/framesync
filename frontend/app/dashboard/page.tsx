@@ -5,6 +5,7 @@ import ProjectCard from "@/components/project/ProjectCard";
 import { Plus, FolderGit2, Search, LayoutDashboard, User, Settings as SettingsIcon, LogOut } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/api";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -20,8 +21,7 @@ export default function DashboardPage() {
     setUserEmail(localStorage.getItem("userEmail") || "user@framesync.app");
 
     // Fetch projects
-    fetch("http://localhost:4000/projects")
-      .then(res => res.json())
+    apiFetch("http://localhost:4000/projects")
       .then(data => setProjects(data))
       .catch(err => console.error(err));
       
@@ -37,21 +37,20 @@ export default function DashboardPage() {
   }, []);
   
   const createProject = async () => {
-    const res = await fetch("http://localhost:4000/projects", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        name: "New Project",
-        description: "Created from dashboard",
-        ownerId: "demo-user",
-      }),
-    });
+    try {
+      const newProject = await apiFetch("http://localhost:4000/projects", {
+        method: "POST",
+        body: JSON.stringify({
+          name: "New Project",
+          description: "Created from dashboard",
+          ownerId: "demo-user", // Backend can later pull this from JWT
+        }),
+      });
 
-    const newProject = await res.json();
-
-    setProjects(prev => [...prev, newProject]);
+      setProjects(prev => [...prev, newProject]);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleSignOut = () => {
