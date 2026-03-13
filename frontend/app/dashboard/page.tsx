@@ -1,17 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import ProjectCard from "@/components/project/ProjectCard";
-import { Plus, FolderGit2, Search, LayoutDashboard } from "lucide-react";
+import { Plus, FolderGit2, Search, LayoutDashboard, User, Settings as SettingsIcon, LogOut } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [projects, setProjects] = useState<any[]>([]);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const [userName, setUserName] = useState("Demo User");
+  const [userEmail, setUserEmail] = useState("user@framesync.app");
 
   useEffect(() => {
+    setUserName(localStorage.getItem("userName") || "Demo User");
+    setUserEmail(localStorage.getItem("userEmail") || "user@framesync.app");
+
+    // Fetch projects
     fetch("http://localhost:4000/projects")
       .then(res => res.json())
       .then(data => setProjects(data))
       .catch(err => console.error(err));
+      
+    // Handle outside click for menu
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowProfileMenu(false);
+      }
+    };
+    
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
   
   const createProject = async () => {
@@ -32,14 +54,21 @@ export default function DashboardPage() {
     setProjects(prev => [...prev, newProject]);
   };
 
+  const handleSignOut = () => {
+    localStorage.removeItem("token");
+    router.push("/login");
+  };
+
   return (
     <div className="min-h-screen bg-zinc-950 text-zinc-100 font-sans selection:bg-indigo-500/30">
       
       {/* Premium Header/Hero */}
-      <div className="relative border-b border-white/5 bg-zinc-950/50 backdrop-blur-xl pt-16 pb-12 overflow-hidden">
+      <div className="relative border-b border-white/5 bg-zinc-950/50 backdrop-blur-xl pt-16 pb-12">
         {/* Background glow effects */}
-        <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[120px]" />
+          <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[120px]" />
+        </div>
         
         <div className="max-w-7xl mx-auto px-8 relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
@@ -74,6 +103,41 @@ export default function DashboardPage() {
               <Plus className="w-4 h-4" />
               New Project
             </button>
+
+            {/* User Profile Dropdown */}
+            <div className="relative ml-2" ref={menuRef}>
+              <button 
+                onClick={() => setShowProfileMenu(!showProfileMenu)}
+                className="w-11 h-11 rounded-full bg-zinc-800 border-2 border-white/10 hover:border-indigo-500/50 flex items-center justify-center transition-all overflow-hidden focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <User className="w-5 h-5 text-zinc-400" />
+              </button>
+
+              {showProfileMenu && (
+                <div className="absolute right-0 mt-3 w-56 bg-zinc-900/90 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <div className="px-4 py-2 mb-2 border-b border-white/5">
+                    <p className="text-sm font-medium text-white truncate">{userName}</p>
+                    <p className="text-xs text-zinc-400 truncate">{userEmail}</p>
+                  </div>
+                  
+                  <Link 
+                    href="/settings"
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-zinc-300 hover:bg-white/5 hover:text-white transition-colors"
+                  >
+                    <SettingsIcon className="w-4 h-4" />
+                    Account Settings
+                  </Link>
+                  
+                  <button 
+                    onClick={handleSignOut}
+                    className="w-full flex items-center gap-3 px-4 py-2 text-sm text-rose-400 hover:bg-rose-500/10 transition-colors mt-1"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign out
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>

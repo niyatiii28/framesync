@@ -10,17 +10,28 @@ export default function AuthCard({
   children,
 }: AuthCardProps) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0b0b0b] via-[#0f0f0f] to-[#141414]">
-      <div className="w-full max-w-md rounded-2xl border border-white/10 bg-[#111111]/80 backdrop-blur-xl shadow-[0_0_0_1px_rgba(255,255,255,0.02),0_20px_60px_rgba(0,0,0,0.6)] p-8">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          {title}
-        </h1>
+    <div className="min-h-screen flex items-center justify-center bg-zinc-950 px-4 relative overflow-hidden selection:bg-indigo-500/30">
+      
+      {/* Background Ambience */}
+      <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[500px] h-[500px] bg-purple-500/10 rounded-full blur-[120px] pointer-events-none" />
 
-        <p className="text-sm text-gray-400 mt-1 mb-8">
-          {subtitle}
-        </p>
+      <div className="w-full max-w-md relative z-10">
+        <div className="rounded-3xl border border-white/10 bg-zinc-950/50 backdrop-blur-xl shadow-2xl shadow-black p-8 relative overflow-hidden">
+          
+          {/* Subtle inner glow */}
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
 
-        {children}
+          <h1 className="text-2xl font-bold tracking-tight text-white">
+            {title}
+          </h1>
+
+          <p className="text-sm text-zinc-400 mt-2 mb-8 leading-relaxed">
+            {subtitle}
+          </p>
+
+          {children}
+        </div>
       </div>
     </div>
   );

@@ -1,35 +1,94 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import AuthCard from "@/components/auth/AuthCard";
 import Link from "next/link";
 
 export default function SignupPage() {
+  const router = useRouter();
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    try {
+      const res = await fetch("http://localhost:4000/auth/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          email,
+          password,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || "Signup failed");
+        return;
+      }
+
+      // save token
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("userName", data.user.name);
+      localStorage.setItem("userEmail", data.user.email);
+
+      // redirect
+      router.push("/dashboard");
+
+    } catch (err) {
+      console.error(err);
+      setError("Something went wrong");
+    }
+  };
+
   return (
     <AuthCard
       title="Create your account"
       subtitle="Collaborate, review, and ship videos faster"
     >
-      <form className="space-y-4">
+      <form onSubmit={handleSignup} className="space-y-4">
+
         <input
           placeholder="Full name"
-          className="w-full rounded-lg bg-[#0c0c0c] border border-white/10 px-4 py-2.5 text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full rounded-xl bg-black/40 border border-white/10 px-4 py-3 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium shadow-inner"
         />
 
         <input
           placeholder="Email address"
           type="email"
-          className="w-full rounded-lg bg-[#0c0c0c] border border-white/10 px-4 py-2.5 text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full rounded-xl bg-black/40 border border-white/10 px-4 py-3 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium shadow-inner"
         />
 
         <input
           placeholder="Password"
           type="password"
-          className="w-full rounded-lg bg-[#0c0c0c] border border-white/10 px-4 py-2.5 text-sm placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className="w-full rounded-xl bg-black/40 border border-white/10 px-4 py-3 text-sm text-zinc-200 placeholder-zinc-500 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 transition-all font-medium shadow-inner"
         />
+
+        {error && (
+          <p className="text-red-400 text-sm">
+            {error}
+          </p>
+        )}
 
         <button
           type="submit"
-          className="mt-2 w-full rounded-lg bg-gradient-to-r from-purple-500 to-indigo-500 py-2.5 text-sm font-medium text-white hover:opacity-90 transition"
+          className="mt-4 w-full rounded-xl bg-indigo-500 hover:bg-indigo-400 py-3 text-sm font-semibold text-white transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:-translate-y-0.5"
         >
           Create account
         </button>
@@ -39,7 +98,7 @@ export default function SignupPage() {
         Already have an account?{" "}
         <Link
           href="/login"
-          className="text-purple-400 hover:text-purple-300"
+          className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors"
         >
           Log in
         </Link>
