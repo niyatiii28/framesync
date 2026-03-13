@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, use } from "react";
 import VideoCanvas from "@/components/review/VideoCanvas";
 import type { FrameAnnotation, Stroke } from "@/types/annotation";
 
@@ -26,8 +26,10 @@ type HistoryAction = {
 export default function ReviewPage({
   params,
 }: {
-  params: { videoId: string };
+  params: Promise<{ videoID: string }>;
 }) {
+  const { videoID } = use(params);
+
   const [tool, setTool] = useState<
     "pen" | "eraser" | "highlighter" | "rect" | "arrow"
   >("pen");
@@ -47,18 +49,24 @@ export default function ReviewPage({
 
   useEffect(() => {
     /* LOAD VIDEO */
-    fetch(`http://localhost:4000/videos/${params.videoId}`)
+    fetch(`http://localhost:4000/videos/${videoID}`)
       .then(res => res.json())
       .then(data => setVideo(data))
       .catch(err => console.error(err));
 
     /* LOAD ANNOTATIONS */
-    fetch(`http://localhost:4000/annotations/${params.videoId}`)
+    fetch(`http://localhost:4000/annotations/${videoID}`)
       .then(res => res.json())
       .then(data => setAnnotations(data))
       .catch(err => console.error(err));
 
-  }, [params.videoId]);
+    /* LOAD COMMENTS */
+    fetch(`http://localhost:4000/comments/${videoID}`)
+      .then(res => res.json())
+      .then(data => setComments(data))
+      .catch(err => console.error(err));
+
+  }, [videoID]);
 
   /* =======================
      VIDEO HELPERS
@@ -121,7 +129,7 @@ export default function ReviewPage({
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        videoId: params.videoId,
+        videoId: videoID,
         time,
         strokes: [stroke],
         color: strokeColor,
@@ -182,16 +190,29 @@ export default function ReviewPage({
   const addComment = () => {
     if (!commentInput.trim()) return;
 
+    const time = getCurrentTime();
+    const text = commentInput.trim();
+
     setComments(prev => [
       ...prev,
       {
         id: crypto.randomUUID(),
-        time: getCurrentTime(),
-        text: commentInput.trim(),
+        time,
+        text,
       },
     ]);
 
     setCommentInput("");
+
+    fetch("http://localhost:4000/comments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        videoId: videoID,
+        time,
+        text,
+      }),
+    }).catch(err => console.error(err));
   };
 
   /* =======================
@@ -245,7 +266,7 @@ export default function ReviewPage({
         <div className="flex items-center gap-4">
           <h1 className="text-lg font-semibold">FrameSync Review</h1>
           <span className="text-xs text-gray-400">
-            Video ID: {params.videoId}
+            Video ID: {videoID}
           </span>
         </div>
 
