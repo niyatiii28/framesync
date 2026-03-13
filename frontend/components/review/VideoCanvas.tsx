@@ -11,6 +11,8 @@ type Props = {
   isDrawMode: boolean;
   annotations: FrameAnnotation[];
   onStrokeComplete: (stroke: Stroke, time: number) => void;
+  onTimeUpdate?: (time: number) => void;
+  onLoadedMetadata?: (duration: number) => void;
 };
 
 export default function VideoCanvas({
@@ -21,6 +23,8 @@ export default function VideoCanvas({
   isDrawMode,
   annotations,
   onStrokeComplete,
+  onTimeUpdate,
+  onLoadedMetadata,
 }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -158,7 +162,13 @@ export default function VideoCanvas({
         src={videoUrl}
         controls
         className="w-full h-full"
-        onTimeUpdate={redraw}
+        onTimeUpdate={(e) => {
+          redraw();
+          onTimeUpdate?.(e.currentTarget.currentTime);
+        }}
+        onLoadedMetadata={(e) => {
+          onLoadedMetadata?.(e.currentTarget.duration);
+        }}
         onSeeked={redraw}
       />
 

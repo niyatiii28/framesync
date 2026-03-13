@@ -3,6 +3,7 @@
 import { useEffect, useState, use } from "react";
 import VideoCanvas from "@/components/review/VideoCanvas";
 import type { FrameAnnotation, Stroke } from "@/types/annotation";
+import { Play, Pen, Highlighter, Square, ArrowUpRight, Eraser, Undo, Redo, Share2, Download, MessageSquare } from "lucide-react";
 
 /* =======================
    TYPES
@@ -46,6 +47,14 @@ export default function ReviewPage({
   const [commentInput, setCommentInput] = useState("");
 
   const [video, setVideo] = useState<any>(null);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+
+  const formatTime = (time: number) => {
+    const m = Math.floor(time / 60);
+    const s = Math.floor(time % 60);
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
 
   useEffect(() => {
     /* LOAD VIDEO */
@@ -258,175 +267,267 @@ export default function ReviewPage({
      UI
   ======================= */
 
+  const vidDuration = duration || video?.duration || 1;
+
   return (
-    <div className="h-screen flex flex-col bg-[#0a0a0a] text-white">
+    <div className="h-screen flex flex-col bg-zinc-950 text-zinc-100 font-sans selection:bg-purple-500/30">
 
       {/* Header */}
-      <div className="h-16 border-b border-white/10 flex items-center justify-between px-8">
+      <header className="h-16 shrink-0 border-b border-white/5 bg-zinc-950/50 backdrop-blur-xl flex items-center justify-between px-6 z-20">
         <div className="flex items-center gap-4">
-          <h1 className="text-lg font-semibold">FrameSync Review</h1>
-          <span className="text-xs text-gray-400">
-            Video ID: {videoID}
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-purple-500/20">
+            <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <h1 className="text-base font-medium tracking-tight">FrameSync Review</h1>
+          <div className="h-4 w-px bg-white/10 mx-1" />
+          <span className="text-xs font-medium text-zinc-500 font-mono tracking-wider">
+            {videoID.slice(0, 8)}
           </span>
         </div>
 
-        <div className="flex gap-3">
-          <button className="px-4 py-2 text-sm bg-white/10 rounded-lg hover:bg-white/20">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center -space-x-2 mr-4">
+            <div className="w-8 h-8 rounded-full border-2 border-zinc-950 bg-indigo-500 flex items-center justify-center text-xs font-medium">JD</div>
+            <div className="w-8 h-8 rounded-full border-2 border-zinc-950 bg-purple-500 flex items-center justify-center text-xs font-medium">NS</div>
+          </div>
+          <button className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg transition-colors">
+            <Share2 className="w-4 h-4" />
             Share
           </button>
-
-          <button className="px-4 py-2 text-sm bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg">
+          <button className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium bg-zinc-100 text-zinc-900 hover:bg-white rounded-lg transition-colors shadow-lg shadow-white/5">
+            <Download className="w-4 h-4" />
             Export
           </button>
         </div>
-      </div>
+      </header>
 
       {/* Main Layout */}
-      <div className="flex flex-1 overflow-hidden">
-
+      <main className="flex flex-1 overflow-hidden relative">
         {/* VIDEO AREA */}
-        <div className="flex-1 flex flex-col items-center justify-center p-10">
-
-          {/* Video */}
-          <div className="w-full max-w-[1100px] rounded-2xl overflow-hidden border border-white/10 bg-black shadow-2xl">
+        <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-zinc-900/50 via-zinc-950 to-zinc-950">
+          
+          {/* Video Container */}
+          <div className="w-full max-w-5xl rounded-2xl overflow-hidden ring-1 ring-white/10 bg-black shadow-2xl shadow-black/50 relative group">
             <VideoCanvas
-              videoUrl="https://www.w3schools.com/html/mov_bbb.mp4"
+              videoUrl="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
               tool={tool}
               strokeSize={strokeSize}
               strokeColor={strokeColor}
               isDrawMode={isDrawMode}
               annotations={annotations}
               onStrokeComplete={addStroke}
+              onTimeUpdate={setCurrentTime}
+              onLoadedMetadata={setDuration}
             />
           </div>
 
-          {/* Timeline */}
-          <div className="w-full max-w-[1100px] mt-4">
+          {/* Timeline Container */}
+          <div className="w-full max-w-5xl mt-8 bg-zinc-900/50 border border-white/5 rounded-xl p-4 shadow-xl backdrop-blur-sm">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-xs font-medium text-zinc-400">Timeline</span>
+              <span className="text-xs font-mono text-zinc-500">
+                {formatTime(currentTime)} / {formatTime(vidDuration)}
+              </span>
+            </div>
+            <div 
+              className="relative h-12 bg-black/40 rounded-lg ring-1 ring-white/5 overflow-hidden group/timeline cursor-pointer"
+              onClick={(e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const pos = (e.clientX - rect.left) / rect.width;
+                seekToTime(pos * vidDuration);
+              }}
+            >
+              
+              {/* Progress Bar */}
+              <div 
+                className="absolute top-0 left-0 h-full bg-indigo-500/20 backdrop-blur-sm pointer-events-none transition-[width] duration-75"
+                style={{ width: `${(currentTime / vidDuration) * 100}%` }}
+              >
+                <div className="absolute right-0 top-0 w-px h-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)]" />
+              </div>
 
-            <div className="relative h-2 bg-[#141414] rounded">
-
+              {/* Comments markers */}
               {comments.map(c => (
                 <div
                   key={c.id}
-                  onClick={() => seekToTime(c.time)}
-                  className="absolute w-3 h-3 bg-purple-500 rounded-full cursor-pointer hover:scale-125 transition"
+                  onClick={(e) => { e.stopPropagation(); seekToTime(c.time); }}
+                  className="absolute w-1.5 h-full bg-indigo-500/50 hover:bg-indigo-400 cursor-pointer transition-colors group z-10"
                   style={{
-                    left: `${(c.time / 20) * 100}%`,
-                    top: "-4px",
+                    left: `${(c.time / vidDuration) * 100}%`,
+                  }}
+                >
+                  <div className="opacity-0 group-hover:opacity-100 absolute bottom-full mb-2 left-1/2 -translate-x-1/2 whitespace-nowrap bg-zinc-800 text-xs px-2 py-1 rounded shadow-lg transition-opacity pointer-events-none z-20">
+                    {c.text.slice(0, 20)}{c.text.length > 20 ? '...' : ''}
+                  </div>
+                </div>
+              ))}
+              {/* Annotations markers */}
+              {annotations.map((a, i) => (
+                <div
+                  key={`ann-${i}`}
+                  onClick={(e) => { e.stopPropagation(); seekToTime(a.time); }}
+                  className="absolute w-1 h-3/4 bottom-1/2 translate-y-1/2 bg-rose-500/50 hover:bg-rose-400 rounded-full cursor-pointer transition-colors z-20"
+                  style={{
+                    left: `${(a.time / vidDuration) * 100}%`,
                   }}
                 />
-
               ))}
-
             </div>
-
           </div>
-
         </div>
 
-        {/* COMMENTS */}
-        <div className="w-[380px] border-l border-white/10 bg-[#0f0f0f] flex flex-col">
+        {/* COMMENTS SIDEBAR */}
+        <aside className="w-[360px] shrink-0 border-l border-white/5 bg-zinc-950/80 backdrop-blur-xl flex flex-col shadow-2xl z-10">
+          <div className="p-5 border-b border-white/5 flex flex-col gap-4">
+            <div className="flex items-center gap-2 text-zinc-100">
+              <MessageSquare className="w-4 h-4" />
+              <h2 className="text-sm font-medium">Feedback & Notes</h2>
+            </div>
 
-          <div className="p-6 border-b border-white/10">
-            <h2 className="text-sm font-semibold mb-3">
-              Comments
-            </h2>
-
-            <textarea
-              value={commentInput}
-              onChange={e => setCommentInput(e.target.value)}
-              placeholder="Add a comment..."
-              className="w-full resize-none rounded-lg bg-[#1a1a1a] border border-white/10 p-3 text-sm mb-3"
-              rows={3}
-            />
-
-            <button
-              onClick={addComment}
-              className="w-full py-2 text-sm rounded-lg bg-gradient-to-r from-purple-500 to-pink-500"
-            >
-              Add Comment
-            </button>
+            <div className="bg-zinc-900/50 rounded-xl p-1 border border-white/5 focus-within:border-indigo-500/50 focus-within:ring-1 focus-within:ring-indigo-500/30 transition-all">
+              <textarea
+                value={commentInput}
+                onChange={e => setCommentInput(e.target.value)}
+                placeholder="Leave a comment at current frame..."
+                className="w-full resize-none bg-transparent p-3 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none min-h-[80px] custom-scrollbar"
+                onKeyDown={e => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    addComment();
+                  }
+                }}
+              />
+              <div className="flex justify-between items-center px-2 pb-2 mt-1">
+                <span className="text-xs text-zinc-500 font-mono">
+                  Press Enter to save
+                </span>
+                <button
+                  onClick={addComment}
+                  className="px-4 py-1.5 text-xs font-medium bg-indigo-500 hover:bg-indigo-400 text-white rounded-lg transition-colors shadow-lg shadow-indigo-500/20"
+                >
+                  Comment
+                </button>
+              </div>
+            </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-5 space-y-3">
-
-            {comments.map(c => (
+          <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
+            {comments.length === 0 ? (
+               <div className="flex flex-col items-center justify-center h-full text-zinc-500 gap-3">
+                 <MessageSquare className="w-8 h-8 opacity-20" />
+                 <p className="text-sm">No comments yet.</p>
+               </div>
+            ) : comments.map(c => (
               <div
                 key={c.id}
                 onClick={() => seekToTime(c.time)}
-                className="cursor-pointer rounded-xl bg-[#141414] p-3 hover:bg-[#1c1c1c] transition"
+                className="group cursor-pointer rounded-xl bg-zinc-900/40 border border-transparent hover:border-white/5 hover:bg-zinc-900/80 p-4 transition-all"
               >
-                <div className="text-xs text-purple-400 mb-1">
-                  {c.time.toFixed(2)}s
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-[10px] font-bold">U</div>
+                    <span className="text-xs font-medium text-zinc-300">User</span>
+                  </div>
+                  <span className="px-1.5 py-0.5 rounded bg-white/5 text-[10px] font-mono text-zinc-400 group-hover:text-zinc-300 transition-colors">
+                    {c.time.toFixed(1)}s
+                  </span>
                 </div>
-
-                <div className="text-sm text-gray-200">
+                <p className="text-sm text-zinc-300 leading-relaxed pl-8 break-words">
                   {c.text}
-                </div>
+                </p>
               </div>
             ))}
-
           </div>
+        </aside>
 
+        {/* FLOATING TOOLBAR */}
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-30">
+          <div className="flex items-center gap-2 bg-zinc-950/90 backdrop-blur-xl border border-white/10 p-2 rounded-2xl shadow-2xl shadow-black/50">
+            
+            <button
+              onClick={togglePlay}
+              className="w-10 h-10 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors shrink-0"
+              title="Play/Pause (Space)"
+            >
+              <Play className="w-5 h-5 fill-current" />
+            </button>
+
+            <div className="w-px h-8 bg-white/10 mx-1 shrink-0" />
+
+            <button
+              onClick={() => setIsDrawMode(p => !p)}
+              className={`flex items-center gap-2 px-4 h-10 rounded-xl text-sm font-medium transition-colors shrink-0 ${
+                isDrawMode
+                  ? "bg-rose-500 text-white shadow-lg shadow-rose-500/25"
+                  : "bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-zinc-200"
+              }`}
+            >
+              <Pen className="w-4 h-4 shrink-0" />
+              {isDrawMode ? "Drawing" : "Draw Annotations"}
+            </button>
+
+            {isDrawMode && (
+              <div className="flex items-center gap-1.5 animate-in slide-in-from-left-2 fade-in pl-2">
+                <ToolButton icon={<Pen className="w-4 h-4" />} active={tool === "pen"} onClick={() => setTool("pen")} tooltip="Pen" />
+                <ToolButton icon={<Highlighter className="w-4 h-4" />} active={tool === "highlighter"} onClick={() => setTool("highlighter")} tooltip="Highlighter" />
+                <ToolButton icon={<Square className="w-4 h-4" />} active={tool === "rect"} onClick={() => setTool("rect")} tooltip="Rectangle" />
+                <ToolButton icon={<ArrowUpRight className="w-4 h-4" />} active={tool === "arrow"} onClick={() => setTool("arrow")} tooltip="Arrow" />
+                <ToolButton icon={<Eraser className="w-4 h-4" />} active={tool === "eraser"} onClick={() => setTool("eraser")} tooltip="Eraser" />
+
+                <div className="w-px h-6 bg-white/10 mx-1 shrink-0" />
+
+                <div className="relative flex items-center justify-center w-8 h-8 rounded-lg overflow-hidden border border-white/10 ml-1 shrink-0">
+                  <input
+                    type="color"
+                    value={strokeColor}
+                    onChange={e => setStrokeColor(e.target.value)}
+                    className="absolute inset-[-10px] w-12 h-12 cursor-pointer"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1 w-20 px-2 shrink-0">
+                  <input
+                    type="range"
+                    min={1}
+                    max={20}
+                    value={strokeSize}
+                    onChange={e => setStrokeSize(+e.target.value)}
+                    className="w-full h-1 bg-white/10 rounded-full appearance-none [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full cursor-pointer"
+                  />
+                </div>
+
+                <div className="w-px h-6 bg-white/10 mx-1 shrink-0" />
+
+                <button onClick={undo} className="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors shrink-0" title="Undo (Cmd+Z)">
+                  <Undo className="w-4 h-4" />
+                </button>
+                <button onClick={redo} className="w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors shrink-0" title="Redo (Cmd+Y)">
+                  <Redo className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
-
-      </div>
-
-      {/* FLOATING TOOLBAR */}
-      <div className="h-20 border-t border-white/10 flex items-center justify-center">
-
-        <div className="flex items-center gap-3 bg-[#111] border border-white/10 px-6 py-3 rounded-2xl">
-
-          <button
-            onClick={togglePlay}
-            className="px-4 py-2 bg-white/10 rounded-lg"
-          >
-            Play
-          </button>
-
-          <button
-            onClick={() => setIsDrawMode(p => !p)}
-            className={`px-4 py-2 rounded-lg ${
-              isDrawMode
-                ? "bg-purple-600"
-                : "bg-white/10"
-            }`}
-          >
-            Draw
-          </button>
-
-          <button onClick={() => setTool("pen")} className="px-3 py-2 bg-white/10 rounded-lg">Pen</button>
-          <button onClick={() => setTool("highlighter")} className="px-3 py-2 bg-white/10 rounded-lg">Highlight</button>
-          <button onClick={() => setTool("rect")} className="px-3 py-2 bg-white/10 rounded-lg">Rect</button>
-          <button onClick={() => setTool("arrow")} className="px-3 py-2 bg-white/10 rounded-lg">Arrow</button>
-          <button onClick={() => setTool("eraser")} className="px-3 py-2 bg-white/10 rounded-lg">Eraser</button>
-
-          <input
-            type="color"
-            value={strokeColor}
-            onChange={e => setStrokeColor(e.target.value)}
-          />
-
-          <input
-            type="range"
-            min={1}
-            max={20}
-            value={strokeSize}
-            onChange={e => setStrokeSize(+e.target.value)}
-          />
-
-          <button onClick={undo} className="px-3 py-2 bg-white/10 rounded-lg">
-            Undo
-          </button>
-
-          <button onClick={redo} className="px-3 py-2 bg-white/10 rounded-lg">
-            Redo
-          </button>
-
-        </div>
-
-      </div>
-
+      </main>
     </div>
+  );
+}
+
+function ToolButton({ icon, active, onClick, tooltip }: { icon: React.ReactNode, active: boolean, onClick: () => void, tooltip: string }) {
+  return (
+    <button
+      onClick={onClick}
+      title={tooltip}
+      className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors shrink-0 ${
+        active 
+          ? "bg-rose-500/20 text-rose-400" 
+          : "text-zinc-400 hover:bg-white/10 hover:text-zinc-200"
+      }`}
+    >
+      {icon}
+    </button>
   );
 }
