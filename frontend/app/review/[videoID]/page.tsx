@@ -374,7 +374,7 @@ export default function ReviewPage({
           {/* Video Container */}
           <div className="w-full max-w-5xl rounded-2xl overflow-hidden ring-1 ring-white/10 bg-black shadow-2xl shadow-black/50 relative group">
             <VideoCanvas
-              videoUrl="http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+              videoUrl={video?.url || ""}
               tool={tool}
               strokeSize={strokeSize}
               strokeColor={strokeColor}

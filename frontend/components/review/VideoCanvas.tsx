@@ -173,7 +173,7 @@ export default function VideoCanvas({
     <div className="relative w-[900px] h-[500px]">
       <video
         ref={videoRef}
-        src={videoUrl}
+        src={videoUrl || undefined}
         controls
         className="w-full h-full"
         onTimeUpdate={(e) => {

@@ -16,17 +16,31 @@ export default function ProjectPage({
   const [videos, setVideos] = useState<any[]>([]);
   const [showUpload, setShowUpload] = useState(false);
   const [title, setTitle] = useState("");
-  const [url, setUrl] = useState("");
-  const [duration, setDuration] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   const createVideo = async () => {
     try {
+      if (!file) return;
+
+      setUploading(true);
+
+      const formData = new FormData();
+      formData.append("video", file);
+
+      const uploadRes = await fetch("http://localhost:4000/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const uploadData = await uploadRes.json();
+
       const newVideo = await apiFetch("http://localhost:4000/videos", {
         method: "POST",
         body: JSON.stringify({
           title,
-          url,
-          duration: Number(duration),
+          url: uploadData.url,
+          duration: 0,
           projectId: projectID,
         }),
       });
@@ -34,11 +48,12 @@ export default function ProjectPage({
       setVideos((prev) => [newVideo, ...prev]);
 
       setTitle("");
-      setUrl("");
-      setDuration("");
+      setFile(null);
       setShowUpload(false);
+      setUploading(false);
     } catch (error) {
       console.error(error);
+      setUploading(false);
     }
   };
   useEffect(() => {
@@ -164,31 +179,25 @@ export default function ProjectPage({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-zinc-400 ml-1">Video URL (mp4)</label>
+                <label className="text-xs font-medium text-zinc-400 ml-1">Video File (mp4)</label>
                 <input
-                  placeholder="https://..."
-                  value={url}
-                  onChange={(e) => setUrl(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 text-sm transition-all placeholder:text-zinc-600"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-zinc-400 ml-1">Duration (seconds)</label>
-                <input
-                  type="number"
-                  placeholder="e.g. 120"
-                  value={duration}
-                  onChange={(e) => setDuration(e.target.value)}
-                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 focus:outline-none focus:border-indigo-500/50 focus:ring-1 focus:ring-indigo-500/50 text-sm transition-all placeholder:text-zinc-600"
+                  type="file"
+                  accept="video/*"
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) {
+                      setFile(e.target.files[0]);
+                    }
+                  }}
+                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-500/10 file:text-indigo-400 hover:file:bg-indigo-500/20"
                 />
               </div>
 
               <button
                 onClick={createVideo}
-                className="mt-4 w-full py-3.5 bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40"
+                disabled={uploading}
+                className="mt-4 w-full py-3.5 bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Upload Video
+                {uploading ? "Uploading..." : "Upload Video"}
               </button>
             </div>
           </div>
