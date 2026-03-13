@@ -1,5 +1,6 @@
 import { Router } from "express";
 import prisma from "../prisma";
+import { authMiddleware } from "../middleware/authMiddleware";
 
 const router = Router();
 
@@ -7,7 +8,7 @@ const router = Router();
 CREATE ANNOTATION
 ========================= */
 
-router.post("/", async (req, res) => {
+router.post("/", authMiddleware, async (req, res) => {
   try {
     const { videoId, time, strokes, color } = req.body;
 

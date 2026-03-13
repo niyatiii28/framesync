@@ -1,5 +1,6 @@
 import { Router } from "express";
 import prisma from "../prisma";
+import { authMiddleware } from "../middleware/authMiddleware";
 
 const router = Router();
 
@@ -58,7 +59,7 @@ router.get("/:videoId", async (req, res) => {
 CREATE video
 POST /videos
 */
-router.post("/", async (req, res) => {
+router.post("/", authMiddleware, async (req, res) => {
   try {
     const { title, url, duration, projectId } = req.body;
 

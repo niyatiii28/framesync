@@ -1,5 +1,6 @@
 import { Router } from "express";
 import prisma from "../prisma";
+import { authMiddleware } from "../middleware/authMiddleware";
 
 const router = Router();
 
@@ -7,12 +8,14 @@ const router = Router();
 CREATE COMMENT
 ========================= */
 
-router.post("/", async (req, res) => {
+router.post("/", authMiddleware, async (req, res) => {
   try {
-    const { videoId, time, text } = req.body as {
+    const { videoId, time, text, x, y } = req.body as {
       videoId: string;
       time: number;
       text: string;
+      x?: number;
+      y?: number;
     };
 
     const newComment = await prisma.comment.create({
@@ -20,6 +23,8 @@ router.post("/", async (req, res) => {
         videoId,
         time,
         text,
+        x: x ?? null,
+        y: y ?? null,
       },
     });
 

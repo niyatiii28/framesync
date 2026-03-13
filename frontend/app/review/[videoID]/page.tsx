@@ -13,6 +13,8 @@ type Comment = {
   id: string;
   time: number;
   text: string;
+  x?: number;
+  y?: number;
 };
 
 type HistoryAction = {
@@ -45,10 +47,12 @@ export default function ReviewPage({
 
   const [comments, setComments] = useState<Comment[]>([]);
   const [commentInput, setCommentInput] = useState("");
+  const [pendingCommentPos, setPendingCommentPos] = useState<{time: number, x: number, y: number} | null>(null);
 
   const [video, setVideo] = useState<any>(null);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
+  const [isScrubbing, setIsScrubbing] = useState(false);
 
   const formatTime = (time: number) => {
     const m = Math.floor(time / 60);
@@ -104,9 +108,29 @@ export default function ReviewPage({
     const video = getVideo();
     if (!video) return;
 
-    video.pause();
+    if (!video.paused && !isScrubbing) {
+       video.pause();
+    }
+    
     video.currentTime = time;
+    setCurrentTime(time);
     video.dispatchEvent(new Event("seeked"));
+  };
+
+  /* =======================
+     SCRUBBING
+  ======================= */
+  
+  const handleTimelineScrub = (e: React.MouseEvent<HTMLDivElement> | React.TouchEvent<HTMLDivElement>) => {
+    if (!isScrubbing) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    
+    let pos = (clientX - rect.left) / rect.width;
+    pos = Math.max(0, Math.min(1, pos)); // Clamp between 0 and 1
+    
+    seekToTime(pos * (duration || video?.duration || 1));
   };
 
   /* =======================
@@ -195,12 +219,24 @@ export default function ReviewPage({
   /* =======================
      COMMENTS
   ======================= */
+  
+  const handleCanvasClick = (time: number, x: number, y: number) => {
+    if (isDrawMode) return;
+    setPendingCommentPos({ time, x, y });
+    
+    // Focus the comment input
+    setTimeout(() => {
+      document.getElementById("comment-input")?.focus();
+    }, 50);
+  };
 
   const addComment = () => {
     if (!commentInput.trim()) return;
 
-    const time = getCurrentTime();
+    const time = pendingCommentPos ? pendingCommentPos.time : getCurrentTime();
     const text = commentInput.trim();
+    const x = pendingCommentPos?.x;
+    const y = pendingCommentPos?.y;
 
     setComments(prev => [
       ...prev,
@@ -208,10 +244,13 @@ export default function ReviewPage({
         id: crypto.randomUUID(),
         time,
         text,
+        x,
+        y
       },
     ]);
 
     setCommentInput("");
+    setPendingCommentPos(null);
 
     fetch("http://localhost:4000/comments", {
       method: "POST",
@@ -220,6 +259,8 @@ export default function ReviewPage({
         videoId: videoID,
         time,
         text,
+        x,
+        y
       }),
     }).catch(err => console.error(err));
   };
@@ -246,14 +287,35 @@ export default function ReviewPage({
 
       if (e.code === "Escape") {
         setIsDrawMode(false);
+        setPendingCommentPos(null);
       }
 
-      if ((e.ctrlKey || e.metaKey) && e.key === "z") {
+      if (e.code === "ArrowLeft") {
+        e.preventDefault();
+        seekToTime(Math.max(0, getCurrentTime() - 0.05)); // roughly 1 frame at 20fps
+      }
+
+      if (e.code === "ArrowRight") {
+        e.preventDefault();
+        seekToTime(getCurrentTime() + 0.05); // roughly 1 frame at 20fps
+      }
+      
+      if (e.code === "KeyC") {
+        e.preventDefault();
+        document.getElementById("comment-input")?.focus();
+      }
+
+      if (e.code === "KeyD") {
+        e.preventDefault();
+        setIsDrawMode(p => !p);
+      }
+
+      if ((e.ctrlKey || e.metaKey) && e.code === "KeyZ") {
         e.preventDefault();
         undo();
       }
 
-      if ((e.ctrlKey || e.metaKey) && e.key === "y") {
+      if ((e.ctrlKey || e.metaKey) && (e.code === "KeyY" || (e.shiftKey && e.code === "KeyZ"))) {
         e.preventDefault();
         redo();
       }
@@ -261,7 +323,7 @@ export default function ReviewPage({
 
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [undo, redo]);
+  }, [undo, redo, duration, isScrubbing]); // added dependencies
 
   /* =======================
      UI
@@ -318,10 +380,24 @@ export default function ReviewPage({
               strokeColor={strokeColor}
               isDrawMode={isDrawMode}
               annotations={annotations}
+              comments={comments}
               onStrokeComplete={addStroke}
+              onCanvasClick={handleCanvasClick}
               onTimeUpdate={setCurrentTime}
               onLoadedMetadata={setDuration}
             />
+            {pendingCommentPos && (
+              <div
+                className="absolute z-20 pointer-events-none animate-in zoom-in duration-200"
+                style={{ left: pendingCommentPos.x, top: pendingCommentPos.y, transform: "translate(-50%, -100%)" }}
+              >
+                <div className="bg-indigo-500 text-white text-[10px] font-bold px-2 py-1 rounded shadow-lg shadow-black/50 mb-1 whitespace-nowrap">
+                  New Comment...
+                </div>
+                <div className="w-2 h-2 bg-indigo-500 rotate-45 -mt-1.5 mx-auto z-[-1]" />
+                <div className="w-4 h-4 rounded-full border border-indigo-500/50 bg-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.5)] mt-1 animate-pulse mx-auto" />
+              </div>
+            )}
           </div>
 
           {/* Timeline Container */}
@@ -334,16 +410,22 @@ export default function ReviewPage({
             </div>
             <div 
               className="relative h-12 bg-black/40 rounded-lg ring-1 ring-white/5 overflow-hidden group/timeline cursor-pointer"
-              onClick={(e) => {
+              onMouseDown={(e) => {
+                setIsScrubbing(true);
                 const rect = e.currentTarget.getBoundingClientRect();
-                const pos = (e.clientX - rect.left) / rect.width;
+                const pos = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
                 seekToTime(pos * vidDuration);
               }}
+              onMouseMove={handleTimelineScrub}
+              onTouchMove={handleTimelineScrub}
+              onMouseUp={() => setIsScrubbing(false)}
+              onMouseLeave={() => setIsScrubbing(false)}
+              onTouchEnd={() => setIsScrubbing(false)}
             >
               
               {/* Progress Bar */}
               <div 
-                className="absolute top-0 left-0 h-full bg-indigo-500/20 backdrop-blur-sm pointer-events-none transition-[width] duration-75"
+                className="absolute top-0 left-0 h-full bg-indigo-500/20 backdrop-blur-sm pointer-events-none"
                 style={{ width: `${(currentTime / vidDuration) * 100}%` }}
               >
                 <div className="absolute right-0 top-0 w-px h-full bg-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.8)]" />
@@ -389,9 +471,10 @@ export default function ReviewPage({
 
             <div className="bg-zinc-900/50 rounded-xl p-1 border border-white/5 focus-within:border-indigo-500/50 focus-within:ring-1 focus-within:ring-indigo-500/30 transition-all">
               <textarea
+                id="comment-input"
                 value={commentInput}
                 onChange={e => setCommentInput(e.target.value)}
-                placeholder="Leave a comment at current frame..."
+                placeholder={pendingCommentPos ? "Add note to pin..." : "Leave a comment at current frame..."}
                 className="w-full resize-none bg-transparent p-3 text-sm text-zinc-200 placeholder:text-zinc-600 focus:outline-none min-h-[80px] custom-scrollbar"
                 onKeyDown={e => {
                   if (e.key === "Enter" && !e.shiftKey) {

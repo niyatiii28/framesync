@@ -1,5 +1,6 @@
 import { Router } from "express";
 import prisma from "../prisma";
+import { authMiddleware } from "../middleware/authMiddleware";
 
 const router = Router();
 
@@ -15,9 +16,10 @@ router.get("/", async (req, res) => {
 });
 
 // CREATE project
-router.post("/", async (req, res) => {
+router.post("/", authMiddleware, async (req, res) => {
   try {
-    const { name, description, ownerId } = req.body;
+    const { name, description} = req.body;
+    const ownerId = (req as any).userId;
 
     const project = await prisma.project.create({
       data: {

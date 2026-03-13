@@ -51,5 +51,7 @@ model Comment {
   video     Video    @relation(fields: [videoId], references: [id])
   time      Float
   text      String
+  x         Float?
+  y         Float?
   createdAt DateTime @default(now())
 }

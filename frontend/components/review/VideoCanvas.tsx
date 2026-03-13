@@ -10,7 +10,9 @@ type Props = {
   strokeColor: string;
   isDrawMode: boolean;
   annotations: FrameAnnotation[];
+  comments: any[];
   onStrokeComplete: (stroke: Stroke, time: number) => void;
+  onCanvasClick?: (time: number, x: number, y: number) => void;
   onTimeUpdate?: (time: number) => void;
   onLoadedMetadata?: (duration: number) => void;
 };
@@ -22,7 +24,9 @@ export default function VideoCanvas({
   strokeColor,
   isDrawMode,
   annotations,
+  comments,
   onStrokeComplete,
+  onCanvasClick,
   onTimeUpdate,
   onLoadedMetadata,
 }: Props) {
@@ -98,18 +102,28 @@ export default function VideoCanvas({
 
   useEffect(() => {
     redraw();
-  }, [annotations]);
+  }, [annotations, comments]);
 
-  /* ---------- Drawing ---------- */
+  /* ---------- Drawing & Clicking ---------- */
   const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawMode || !ctxRef.current) return;
-    videoRef.current?.pause();
+    const video = videoRef.current;
+    if (!ctxRef.current || !video) return;
 
     const rect = canvasRef.current!.getBoundingClientRect();
-    const start: Point = {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
-    };
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if (!isDrawMode) {
+      // Handle floating comment click
+      if (onCanvasClick) {
+        onCanvasClick(video.currentTime, x, y);
+      }
+      return;
+    }
+
+    video.pause();
+
+    const start: Point = { x, y };
 
     isDrawingRef.current = true;
 
@@ -175,12 +189,29 @@ export default function VideoCanvas({
       <canvas
         ref={canvasRef}
         className="absolute top-0 left-0 z-10"
-        style={{ pointerEvents: isDrawMode ? "auto" : "none" }}
+        style={{ pointerEvents: "auto", cursor: isDrawMode ? "crosshair" : "pointer" }}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={stopDrawing}
         onMouseLeave={stopDrawing}
       />
+
+      {/* Floating Comment Pins */}
+      {comments
+        .filter(c => c.x !== undefined && c.y !== undefined && Math.abs(c.time - (videoRef.current?.currentTime || 0)) < 0.05)
+        .map(c => (
+          <div
+            key={c.id}
+            className="absolute z-20 flex flex-col items-center animate-in zoom-in duration-200"
+            style={{ left: c.x, top: c.y, transform: "translate(-50%, -100%)" }}
+          >
+            <div className="bg-zinc-900 border border-white/10 text-white text-xs px-3 py-1.5 rounded-lg shadow-xl shadow-black/50 mb-1 max-w-[200px] break-words">
+              {c.text}
+            </div>
+            <div className="w-3 h-3 bg-zinc-900 border-r border-b border-white/10 rotate-45 -mt-2.5 z-[-1]" />
+            <div className="w-4 h-4 rounded-full bg-indigo-500 border-2 border-white/20 shadow-[0_0_10px_rgba(99,102,241,0.8)] mt-1" />
+          </div>
+        ))}
     </div>
   );
 }
