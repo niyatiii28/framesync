@@ -1,6 +1,7 @@
 import { Router } from "express";
 import prisma from "../prisma";
 import { authMiddleware } from "../middleware/authMiddleware";
+import { io } from "../index";
 
 const router = Router();
 
@@ -27,6 +28,8 @@ router.post("/", authMiddleware, async (req, res) => {
         y: y ?? null,
       },
     });
+
+    io.emit("new-comment", newComment);
 
     res.json(newComment);
   } catch (error) {

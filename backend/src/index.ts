@@ -1,3 +1,5 @@
+export let io: Server;
+
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -9,6 +11,8 @@ import videoRoutes from "./routes/videos";
 import annotationRoutes from "./routes/annotations";
 import authRoutes from "./routes/auth";
 import uploadRoutes from "./routes/upload";
+import { createServer } from "http";
+import { Server } from "socket.io";
 
 dotenv.config();
 
@@ -47,6 +51,22 @@ app.get("/health", (_req, res) => {
 
 const PORT = process.env.PORT || 4000;
 
-app.listen(PORT, () => {
+const httpServer = createServer(app);
+
+io = new Server(httpServer, {
+  cors: {
+    origin: "*",
+  },
+});
+
+io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
+
+  socket.on("disconnect", () => {
+    console.log("User disconnected:", socket.id);
+  });
+});
+
+httpServer.listen(PORT, () => {
   console.log(`🚀 FrameSync backend running on port ${PORT}`);
 });

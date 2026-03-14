@@ -5,6 +5,7 @@ import type { FrameAnnotation, Stroke } from "@/types/annotation";
 import { Play, Pen, Highlighter, Square, ArrowUpRight, Eraser, Undo, Redo, Share2, Download, MessageSquare, Pause, ArrowLeft } from "lucide-react";
 import VideoCanvas from "@/components/review/VideoCanvas";
 import { apiFetch } from "@/lib/api";
+import { io } from "socket.io-client";
 
 /* =======================
    TYPES
@@ -84,6 +85,18 @@ export default function ReviewPage({
       .catch(err => console.error(err));
 
   }, [videoID]);
+
+  useEffect(() => {
+    const socket = io("http://localhost:4000");
+
+    socket.on("new-comment", (comment) => {
+      setComments(prev => [...prev, comment]);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
 
   /* =======================
      VIDEO HELPERS
