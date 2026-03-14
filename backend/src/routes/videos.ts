@@ -34,9 +34,19 @@ async function getPresignedVideoUrl(videoUrl: string) {
 GET videos for a project
 GET /videos/project/:projectId
 */
-router.get("/project/:projectId", async (req, res) => {
+router.get("/project/:projectId", authMiddleware, async (req, res) => {
   try {
-    const { projectId } = req.params;
+    const { projectId } = req.params as { projectId: string };
+    const userId = (req as any).userId;
+
+    // Check if project belongs to user
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+    });
+
+    if (!project || project.ownerId !== userId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
 
     const videos = await prisma.video.findMany({
       where: { projectId },
@@ -56,17 +66,21 @@ router.get("/project/:projectId", async (req, res) => {
 });
 
 // GET single video
-router.get("/:id", async (req, res) => {
+router.get("/:id", authMiddleware, async (req, res) => {
   try {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
+    const userId = (req as any).userId;
 
     const video = await prisma.video.findUnique({
       where: { id },
-    });
+      include: { project: true },
+    }) as any;
     
-    if (video) {
-        video.url = await getPresignedVideoUrl(video.url);
+    if (!video || video.project.ownerId !== userId) {
+      return res.status(403).json({ error: "Access denied" });
     }
+
+    video.url = await getPresignedVideoUrl(video.url);
 
     res.json(video);
   } catch (error) {

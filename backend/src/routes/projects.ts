@@ -5,9 +5,12 @@ import { authMiddleware } from "../middleware/authMiddleware";
 const router = Router();
 
 // GET all projects
-router.get("/", async (req, res) => {
+router.get("/", authMiddleware, async (req, res) => {
   try {
-    const projects = await prisma.project.findMany();
+    const ownerId = (req as any).userId;
+    const projects = await prisma.project.findMany({
+      where: { ownerId },
+    });
     res.json(projects);
   } catch (error) {
     console.error(error);

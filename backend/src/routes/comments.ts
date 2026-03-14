@@ -39,9 +39,20 @@ router.post("/", authMiddleware, async (req, res) => {
 GET COMMENTS FOR VIDEO
 ========================= */
 
-router.get("/:videoId", async (req, res) => {
+router.get("/:videoId", authMiddleware, async (req, res) => {
   try {
     const { videoId } = req.params as { videoId: string };
+    const userId = (req as any).userId;
+
+    // Check ownership via video -> project
+    const video = await prisma.video.findUnique({
+      where: { id: videoId },
+      include: { project: true },
+    });
+
+    if (!video || video.project.ownerId !== userId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
 
     const comments = await prisma.comment.findMany({
       where: { videoId },
