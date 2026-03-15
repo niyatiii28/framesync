@@ -16,6 +16,9 @@ export default function DashboardPage() {
   const [userName, setUserName] = useState("Demo User");
   const [userEmail, setUserEmail] = useState("user@framesync.app");
 
+  const [projectName, setProjectName] = useState("");
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
   useEffect(() => {
     setUserName(localStorage.getItem("userName") || "Demo User");
     setUserEmail(localStorage.getItem("userEmail") || "user@framesync.app");
@@ -38,16 +41,21 @@ export default function DashboardPage() {
   
   const createProject = async () => {
     try {
+      if (!projectName.trim()) return;
+
       const newProject = await apiFetch("/projects", {
         method: "POST",
         body: JSON.stringify({
-          name: "New Project",
+          name: projectName,
           description: "Created from dashboard",
-          ownerId: "demo-user", // Backend can later pull this from JWT
         }),
       });
 
       setProjects(prev => [...prev, newProject]);
+
+      setProjectName("");
+      setShowCreateModal(false);
+
     } catch (err) {
       console.error(err);
     }
@@ -96,7 +104,7 @@ export default function DashboardPage() {
             </div>
             
             <button
-              onClick={createProject}
+              onClick={() => setShowCreateModal(true)}
               className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-zinc-950 hover:bg-zinc-200 rounded-xl text-sm font-semibold transition-all duration-300 shadow-lg shadow-white/10 hover:-translate-y-0.5 shrink-0"
             >
               <Plus className="w-4 h-4" />
@@ -184,6 +192,33 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+      {showCreateModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black/70 z-50">
+
+          <div className="bg-zinc-900 p-6 rounded-xl w-96">
+
+            <h2 className="text-lg font-semibold mb-4">
+              Create New Project
+            </h2>
+
+            <input
+              placeholder="Project name"
+              value={projectName}
+              onChange={(e) => setProjectName(e.target.value)}
+              className="w-full p-3 rounded bg-zinc-800 mb-4 text-white"
+            />
+
+            <button
+              onClick={createProject}
+              className="w-full bg-indigo-500 py-2 rounded"
+            >
+              Create Project
+            </button>
+
+          </div>
+
+        </div>
+      )}
     </div>
   );
 }
