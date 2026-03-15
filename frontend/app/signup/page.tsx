@@ -18,24 +18,14 @@ export default function SignupPage() {
     e.preventDefault();
 
     try {
-      const res = await apiFetch("/auth/signup", {
+      const data = await apiFetch("/auth/signup", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           name,
           email,
           password,
         }),
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Signup failed");
-        return;
-      }
 
       // save token
       localStorage.setItem("token", data.token);
@@ -45,9 +35,9 @@ export default function SignupPage() {
       // redirect
       router.push("/dashboard");
 
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError("Something went wrong");
+      setError(err.message || "Something went wrong");
     }
   };
 

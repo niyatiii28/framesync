@@ -13,9 +13,16 @@ export default function SharePage({
   const [project, setProject] = useState<any>(null);
 
   useEffect(() => {
-    apiFetch(`/projects/share/${token}`)
-      .then((res) => res.json())
-      .then((data) => setProject(data));
+    const fetchProject = async () => {
+      try {
+        const data = await apiFetch(`/projects/share/${token}`);
+        setProject(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchProject();
   }, [token]);
 
   if (!project) {

@@ -17,23 +17,13 @@ export default function LoginPage() {
     e.preventDefault();
 
     try {
-      const res = await apiFetch("/auth/login", {
+      const data = await apiFetch("/auth/login", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
         body: JSON.stringify({
           email,
           password,
         }),
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error || "Login failed");
-        return;
-      }
 
       // save token
       localStorage.setItem("token", data.token);
@@ -43,9 +33,9 @@ export default function LoginPage() {
       // redirect
       router.push("/dashboard");
 
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError("Something went wrong");
+      setError(err.message || "Something went wrong");
     }
   };
 

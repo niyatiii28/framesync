@@ -28,12 +28,10 @@ export default function ProjectPage({
       const formData = new FormData();
       formData.append("video", file);
 
-      const uploadRes = await apiFetch("/upload", {
+      const uploadData = await apiFetch("/upload", {
         method: "POST",
         body: formData,
       });
-
-      const uploadData = await uploadRes.json();
 
       const newVideo = await apiFetch("/videos", {
         method: "POST",
