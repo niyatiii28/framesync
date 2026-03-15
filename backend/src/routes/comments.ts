@@ -19,13 +19,19 @@ router.post("/", authMiddleware, async (req, res) => {
       y?: number;
     };
 
+    const userId = (req as any).userId;
+
     const newComment = await prisma.comment.create({
       data: {
         videoId,
+        userId,
         time,
         text,
         x: x ?? null,
         y: y ?? null,
+      },
+      include: {
+        user: true,
       },
     });
 
@@ -47,22 +53,41 @@ router.get("/:videoId", authMiddleware, async (req, res) => {
     const { videoId } = req.params as { videoId: string };
     const userId = (req as any).userId;
 
-    // Check ownership via video -> project
     const video = await prisma.video.findUnique({
       where: { id: videoId },
-      include: { project: true },
-    });
+      include: {
+        project: {
+          include: {
+            members: true,
+          },
+        },
+      },
+    }) as any;
 
-    if (!video || video.project.ownerId !== userId) {
+    if (!video) {
+      return res.status(404).json({ error: "Video not found" });
+    }
+
+    const isOwner = video.project.ownerId === userId;
+
+    const isMember = video.project.members.some(
+      (member: any) => member.userId === userId
+    );
+
+    if (!isOwner && !isMember) {
       return res.status(403).json({ error: "Access denied" });
     }
 
     const comments = await prisma.comment.findMany({
       where: { videoId },
       orderBy: { time: "asc" },
+      include: {
+        user: true,
+      },
     });
 
     res.json(comments);
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to fetch comments" });

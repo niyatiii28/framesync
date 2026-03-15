@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import VideoCard from "@/components/project/VideoCard";
-import { Plus, X, Video, PlaySquare, ArrowLeft } from "lucide-react";
+import { Plus, X, Video, PlaySquare, ArrowLeft, Share2 } from "lucide-react";
 import Link from "next/link";
 import { apiFetch } from "@/lib/api";
 
@@ -56,10 +56,54 @@ export default function ProjectPage({
       setUploading(false);
     }
   };
+
+  // SHARE PROJECT FUNCTION
+  const handleShare = async () => {
+    try {
+      const res = await apiFetch(
+        `http://localhost:4000/projects/${projectID}/share`,
+        {
+          method: "POST",
+        }
+      );
+
+      navigator.clipboard.writeText(res.shareLink);
+
+      alert("Share link copied to clipboard!");
+    } catch (error) {
+      console.error(error);
+      alert("Failed to generate share link");
+    }
+  };
+
+  const inviteUser = async (email: string) => {
+    try {
+      await apiFetch(
+        `http://localhost:4000/projects/${projectID}/invite`,
+        {
+          method: "POST",
+          body: JSON.stringify({ email }),
+        }
+      );
+
+      alert("User invited successfully!");
+
+    } catch (error: any) {
+
+      if (error.message.includes("User not found")) {
+        alert("This user hasn't signed up yet.");
+      } else {
+        alert("Failed to invite user.");
+      }
+
+      console.error(error);
+    }
+  };
+
   useEffect(() => {
     apiFetch(`http://localhost:4000/videos/project/${projectID}`)
-      .then(data => setVideos(data))
-      .catch(err => console.error(err));
+      .then((data) => setVideos(data))
+      .catch((err) => console.error(err));
   }, [projectID]);
 
   return (
@@ -74,7 +118,10 @@ export default function ProjectPage({
         </div>
         
         <div className="max-w-6xl mx-auto px-8 relative z-10">
-          <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors mb-8 group">
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors mb-8 group"
+          >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             Back to Dashboard
           </Link>
@@ -85,23 +132,50 @@ export default function ProjectPage({
                 <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center shadow-lg shadow-purple-500/20">
                   <PlaySquare className="w-6 h-6 text-white" />
                 </div>
+
                 <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white">
                   Project Videos
                 </h1>
               </div>
+
               <p className="text-zinc-400 font-mono text-sm inline-flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
                 <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
                 ID: {projectID}
               </p>
             </div>
 
-            <button
-              onClick={() => setShowUpload(true)}
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-zinc-950 hover:bg-zinc-200 rounded-xl text-sm font-semibold transition-all duration-300 shadow-lg shadow-white/10 hover:-translate-y-0.5"
-            >
-              <Plus className="w-4 h-4" />
-              Upload Video
-            </button>
+            <div className="flex gap-3">
+
+              {/* SHARE BUTTON */}
+              <button
+                onClick={handleShare}
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 text-white hover:bg-indigo-500 rounded-xl text-sm font-semibold transition-all duration-300 shadow-lg shadow-indigo-500/20 hover:-translate-y-0.5"
+              >
+                Share Project
+              </button>
+
+              {/* INVITE USER */}
+              <button
+                onClick={() => {
+                  if (typeof window !== "undefined") {
+                    const email = window.prompt("Enter user email to invite:");
+                    if (email) inviteUser(email);
+                  }
+                }}
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-purple-600 text-white hover:bg-purple-500 rounded-xl text-sm font-semibold transition-all duration-300 shadow-lg shadow-purple-500/20 hover:-translate-y-0.5"
+              >
+                Invite User
+              </button>
+
+              {/* UPLOAD BUTTON */}
+              <button
+                onClick={() => setShowUpload(true)}
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-white text-zinc-950 hover:bg-zinc-200 rounded-xl text-sm font-semibold transition-all duration-300 shadow-lg shadow-white/10 hover:-translate-y-0.5"
+              >
+                Upload Video
+              </button>
+
+            </div>
           </div>
         </div>
       </div>
@@ -122,10 +196,16 @@ export default function ProjectPage({
               <div className="w-16 h-16 rounded-2xl bg-zinc-900 border border-white/5 flex items-center justify-center mb-6 shadow-inner">
                 <Video className="w-8 h-8 text-zinc-600" />
               </div>
-              <h3 className="text-lg font-medium text-zinc-200 mb-2">No videos yet</h3>
+
+              <h3 className="text-lg font-medium text-zinc-200 mb-2">
+                No videos yet
+              </h3>
+
               <p className="text-zinc-500 text-center max-w-sm mb-6 leading-relaxed">
-                Upload your first video to start collaborating and making annotations with your team.
+                Upload your first video to start collaborating and making
+                annotations with your team.
               </p>
+
               <button
                 onClick={() => setShowUpload(true)}
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-lg text-sm font-medium transition-colors border border-white/5"
@@ -149,16 +229,16 @@ export default function ProjectPage({
         </div>
       </div>
 
-      {/* Upload Modal (Glassmorphic) */}
+      {/* Upload Modal */}
       {showUpload && (
         <div className="fixed inset-0 flex items-center justify-center bg-zinc-950/80 backdrop-blur-md z-50 p-4 animate-in fade-in duration-200">
           <div className="w-full max-w-md bg-zinc-900/90 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl shadow-black animate-in zoom-in-95 duration-200 relative overflow-hidden">
             
-            {/* Modal glow */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-1/2 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
             <div className="flex justify-between items-center mb-8 relative z-10">
-              <h2 className="text-xl font-semibold text-white">Upload New Video</h2>
+              <h2 className="text-xl font-semibold text-white">
+                Upload New Video
+              </h2>
+
               <button
                 onClick={() => setShowUpload(false)}
                 className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-zinc-400 hover:bg-white/10 hover:text-white transition-colors"
@@ -169,7 +249,10 @@ export default function ProjectPage({
 
             <div className="flex flex-col gap-5 relative z-10">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-zinc-400 ml-1">Video Title</label>
+                <label className="text-xs font-medium text-zinc-400 ml-1">
+                  Video Title
+                </label>
+
                 <input
                   placeholder="e.g. Homepage Walkthrough"
                   value={title}
@@ -179,23 +262,37 @@ export default function ProjectPage({
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-zinc-400 ml-1">Video File (mp4)</label>
-                <input
-                  type="file"
-                  accept="video/*"
-                  onChange={(e) => {
-                    if (e.target.files?.[0]) {
-                      setFile(e.target.files[0]);
-                    }
-                  }}
-                  className="w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-500/10 file:text-indigo-400 hover:file:bg-indigo-500/20"
-                />
+                <label className="text-xs font-medium text-zinc-400 ml-1">
+                  Video File
+                </label>
+
+                <label className="flex items-center justify-between w-full px-4 py-3 rounded-xl bg-black/40 border border-white/10 cursor-pointer hover:border-indigo-500/40 transition-all">
+                  
+                  <span className="text-sm text-zinc-400">
+                    {file ? file.name : "Select video file"}
+                  </span>
+
+                  <span className="px-3 py-1 text-xs rounded-lg bg-indigo-500/20 text-indigo-400">
+                    Browse
+                  </span>
+
+                  <input
+                    type="file"
+                    accept="video/*"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) {
+                        setFile(e.target.files[0]);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                </label>
               </div>
 
               <button
                 onClick={createVideo}
                 disabled={uploading}
-                className="mt-4 w-full py-3.5 bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mt-4 w-full py-3.5 bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl text-sm font-semibold transition-all shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 disabled:opacity-50"
               >
                 {uploading ? "Uploading..." : "Upload Video"}
               </button>

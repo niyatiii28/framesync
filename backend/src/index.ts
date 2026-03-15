@@ -59,12 +59,51 @@ io = new Server(httpServer, {
   },
 });
 
+/* ======================
+   LIVE VIEWER TRACKING
+====================== */
+
+const videoRooms: Record<string, Set<string>> = {};
+
 io.on("connection", (socket) => {
+
   console.log("User connected:", socket.id);
 
-  socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
+  // When user opens a video review page
+  socket.on("join-video", (videoId: string) => {
+
+    socket.join(videoId);
+
+    if (!videoRooms[videoId]) {
+      videoRooms[videoId] = new Set();
+    }
+
+    videoRooms[videoId].add(socket.id);
+
+    io.to(videoId).emit(
+      "active-viewers",
+      Array.from(videoRooms[videoId])
+    );
+
   });
+
+  socket.on("disconnect", () => {
+
+    console.log("User disconnected:", socket.id);
+
+    for (const videoId in videoRooms) {
+
+      videoRooms[videoId].delete(socket.id);
+
+      io.to(videoId).emit(
+        "active-viewers",
+        Array.from(videoRooms[videoId])
+      );
+
+    }
+
+  });
+
 });
 
 httpServer.listen(PORT, () => {

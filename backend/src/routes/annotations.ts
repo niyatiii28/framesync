@@ -37,13 +37,28 @@ router.get("/:videoId", authMiddleware, async (req, res) => {
     const { videoId } = req.params as { videoId: string };
     const userId = (req as any).userId;
 
-    // Check ownership
     const video = await prisma.video.findUnique({
       where: { id: videoId },
-      include: { project: true },
+      include: {
+        project: {
+          include: {
+            members: true,
+          },
+        },
+      },
     }) as any;
 
-    if (!video || video.project.ownerId !== userId) {
+    if (!video) {
+      return res.status(404).json({ error: "Video not found" });
+    }
+
+    const isOwner = video.project.ownerId === userId;
+
+    const isMember = video.project.members.some(
+      (member: any) => member.userId === userId
+    );
+
+    if (!isOwner && !isMember) {
       return res.status(403).json({ error: "Access denied" });
     }
 
@@ -53,6 +68,7 @@ router.get("/:videoId", authMiddleware, async (req, res) => {
     });
 
     res.json(annotations);
+
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Failed to fetch annotations" });

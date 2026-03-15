@@ -7,6 +7,21 @@ import VideoCanvas from "@/components/review/VideoCanvas";
 import { apiFetch } from "@/lib/api";
 import { io } from "socket.io-client";
 
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase();
+}
+const avatarColors = [
+  "bg-indigo-500",
+  "bg-purple-500",
+  "bg-pink-500",
+  "bg-blue-500",
+  "bg-emerald-500",
+];
+
 /* =======================
    TYPES
 ======================= */
@@ -17,6 +32,11 @@ type Comment = {
   text: string;
   x?: number;
   y?: number;
+
+  user?: {
+    id: string;
+    name: string;
+  };
 };
 
 type HistoryAction = {
@@ -48,6 +68,7 @@ export default function ReviewPage({
   const [redoStack, setRedoStack] = useState<HistoryAction[]>([]);
 
   const [comments, setComments] = useState<Comment[]>([]);
+  const [viewers, setViewers] = useState<any[]>([]);
   const [commentInput, setCommentInput] = useState("");
   const [pendingCommentPos, setPendingCommentPos] = useState<{time: number, x: number, y: number} | null>(null);
 
@@ -55,6 +76,9 @@ export default function ReviewPage({
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [isScrubbing, setIsScrubbing] = useState(false);
+
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [collaborators, setCollaborators] = useState<any[]>([]);
 
   const formatTime = (time: number) => {
     const m = Math.floor(time / 60);
@@ -65,7 +89,18 @@ export default function ReviewPage({
   useEffect(() => {
     // 1. Fetch video details
     apiFetch(`http://localhost:4000/videos/${videoID}`)
-      .then(data => setVideo(data))
+      .then(data => {
+        setVideo(data);
+
+        const owner = {
+          id: data.project.ownerId,
+          name: data.project.owner?.name || "Owner"
+        };
+
+        const members = data.project.members.map((m: any) => m.user);
+
+        setCollaborators([owner, ...members]);
+      })
       .catch(err => console.error(err));
 
     // 2. Fetch annotations
@@ -89,14 +124,24 @@ export default function ReviewPage({
   useEffect(() => {
     const socket = io("http://localhost:4000");
 
+    // Join this video's room
+    socket.emit("join-video", videoID);
+
+    // Live comments
     socket.on("new-comment", (comment) => {
       setComments(prev => [...prev, comment]);
+    });
+
+    // Active viewers
+    socket.on("active-viewers", (users) => {
+      setViewers(users);
     });
 
     return () => {
       socket.disconnect();
     };
-  }, []);
+  }, [videoID]);
+
 
   /* =======================
      VIDEO HELPERS
@@ -252,17 +297,6 @@ export default function ReviewPage({
     const x = pendingCommentPos?.x;
     const y = pendingCommentPos?.y;
 
-    setComments(prev => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        time,
-        text,
-        x,
-        y
-      },
-    ]);
-
     setCommentInput("");
     setPendingCommentPos(null);
 
@@ -365,9 +399,26 @@ export default function ReviewPage({
 
         <div className="flex items-center gap-3">
           <div className="flex items-center -space-x-2 mr-4">
-            <div className="w-8 h-8 rounded-full border-2 border-zinc-950 bg-indigo-500 flex items-center justify-center text-xs font-medium">JD</div>
-            <div className="w-8 h-8 rounded-full border-2 border-zinc-950 bg-purple-500 flex items-center justify-center text-xs font-medium">NS</div>
+            {collaborators.slice(0,3).map((user, i) => (
+              <div
+                key={user.id || i}
+                title={user.name}
+                className={`w-8 h-8 rounded-full border-2 border-zinc-950 ${avatarColors[i % avatarColors.length]} flex items-center justify-center text-xs font-medium`}
+              >
+                {getInitials(user.name)}
+              </div>
+            ))}
+
+            {collaborators.length > 3 && (
+              <div className="w-8 h-8 rounded-full border-2 border-zinc-950 bg-zinc-700 flex items-center justify-center text-xs font-medium">
+                +{collaborators.length - 3}
+              </div>
+            )}
           </div>
+
+          <span className="text-xs text-zinc-400 ml-2">
+            {viewers.length} watching
+          </span>
           <button className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium bg-white/5 hover:bg-white/10 border border-white/5 rounded-lg transition-colors">
             <Share2 className="w-4 h-4" />
             Share
@@ -524,8 +575,12 @@ export default function ReviewPage({
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-[10px] font-bold">U</div>
-                    <span className="text-xs font-medium text-zinc-300">User</span>
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-[10px] font-bold">
+                      {getInitials(c.user?.name || "User")}
+                    </div>
+                    <span className="text-xs font-medium text-zinc-300">
+                      {c.user?.name || "User"}
+                    </span>
                   </div>
                   <span className="px-1.5 py-0.5 rounded bg-white/5 text-[10px] font-mono text-zinc-400 group-hover:text-zinc-300 transition-colors">
                     {c.time.toFixed(1)}s
