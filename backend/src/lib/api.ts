@@ -1,7 +1,7 @@
 export async function apiFetch(url: string, options: RequestInit = {}) {
   const token = localStorage.getItem("token");
 
-  const res = await fetch(`http://localhost:4000${url}`, {
+  const res = await fetch(`https://framesync-knk8.onrender.com${url}`, {
     ...options,
     headers: {
       "Content-Type": "application/json",
