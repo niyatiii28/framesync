@@ -1,5 +1,6 @@
 "use client";
 
+import { apiFetch } from "@/lib/api";
 import { useEffect, useState, use } from "react";
 
 export default function SharePage({
@@ -12,7 +13,7 @@ export default function SharePage({
   const [project, setProject] = useState<any>(null);
 
   useEffect(() => {
-    fetch(`/projects/share/${token}`)
+    apiFetch(`/projects/share/${token}`)
       .then((res) => res.json())
       .then((data) => setProject(data));
   }, [token]);

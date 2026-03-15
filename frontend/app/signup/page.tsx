@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import AuthCard from "@/components/auth/AuthCard";
 import Link from "next/link";
+import { apiFetch } from "@/lib/api";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -17,7 +18,7 @@ export default function SignupPage() {
     e.preventDefault();
 
     try {
-      const res = await fetch("/auth/signup", {
+      const res = await apiFetch("/auth/signup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
