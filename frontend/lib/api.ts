@@ -4,11 +4,17 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
   const token =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
-  const headers = {
-    "Content-Type": "application/json",
+  const isFormData = options.body instanceof FormData;
+
+  const headers: Record<string, string> = {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...options.headers,
+    ...(options.headers as Record<string, string>),
   };
+
+  // Only add JSON content-type if NOT uploading files
+  if (!isFormData) {
+    headers["Content-Type"] = "application/json";
+  }
 
   const res = await fetch(`${API_BASE}${url}`, {
     ...options,
