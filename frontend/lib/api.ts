@@ -1,5 +1,8 @@
+const API_BASE = "https://framesync-knk8.onrender.com";
+
 export async function apiFetch(url: string, options: RequestInit = {}) {
-  const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
   const headers = {
     "Content-Type": "application/json",
@@ -7,7 +10,7 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
     ...options.headers,
   };
 
-  const res = await fetch(url, {
+  const res = await fetch(`${API_BASE}${url}`, {
     ...options,
     headers,
   });
@@ -19,6 +22,7 @@ export async function apiFetch(url: string, options: RequestInit = {}) {
         window.location.href = "/login";
       }
     }
+
     const errorDetails = await res.text();
     throw new Error(`API error ${res.status}: ${errorDetails}`);
   }
