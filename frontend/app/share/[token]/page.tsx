@@ -12,7 +12,7 @@ export default function SharePage({
   const [project, setProject] = useState<any>(null);
 
   useEffect(() => {
-    fetch(`http://localhost:4000/projects/share/${token}`)
+    fetch(`https://framesync-knk8.onrender.com/projects/share/${token}`)
       .then((res) => res.json())
       .then((data) => setProject(data));
   }, [token]);

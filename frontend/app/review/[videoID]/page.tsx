@@ -104,7 +104,7 @@ export default function ReviewPage({
       .catch(err => console.error(err));
 
     // 2. Fetch annotations
-    apiFetch(`http://localhost:4000/annotations/${videoID}`)
+    apiFetch(`https://framesync-knk8.onrender.com/annotations/${videoID}`)
       .then(data => {
         const parsed = data.map((a: any) => ({
           ...a,
@@ -115,14 +115,14 @@ export default function ReviewPage({
       .catch(err => console.error(err));
 
     // 3. Fetch comments
-    apiFetch(`http://localhost:4000/comments/${videoID}`)
+    apiFetch(`https://framesync-knk8.onrender.com/comments/${videoID}`)
       .then(data => setComments(data))
       .catch(err => console.error(err));
 
   }, [videoID]);
 
   useEffect(() => {
-    const socket = io("http://localhost:4000");
+    const socket = io("https://framesync-knk8.onrender.com");
 
     // Join this video's room
     socket.emit("join-video", videoID);
@@ -218,7 +218,7 @@ export default function ReviewPage({
     setUndoStack(prev => [...prev, { time, stroke }]);
     setRedoStack([]);
 
-    apiFetch("http://localhost:4000/annotations", {
+    apiFetch("https://framesync-knk8.onrender.com/annotations", {
       method: "POST",
       body: JSON.stringify({
         videoId: videoID,
@@ -300,7 +300,7 @@ export default function ReviewPage({
     setCommentInput("");
     setPendingCommentPos(null);
 
-    apiFetch("http://localhost:4000/comments", {
+    apiFetch("https://framesync-knk8.onrender.com/comments", {
       method: "POST",
       body: JSON.stringify({
         videoId: videoID,

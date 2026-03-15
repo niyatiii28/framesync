@@ -17,7 +17,7 @@ export default function SignupPage() {
     e.preventDefault();
 
     try {
-      const res = await fetch("http://localhost:4000/auth/signup", {
+      const res = await fetch("https://framesync-knk8.onrender.com/auth/signup", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -28,14 +28,14 @@ export default function ProjectPage({
       const formData = new FormData();
       formData.append("video", file);
 
-      const uploadRes = await fetch("http://localhost:4000/upload", {
+      const uploadRes = await fetch("https://framesync-knk8.onrender.com/upload", {
         method: "POST",
         body: formData,
       });
 
       const uploadData = await uploadRes.json();
 
-      const newVideo = await apiFetch("http://localhost:4000/videos", {
+      const newVideo = await apiFetch("https://framesync-knk8.onrender.com/videos", {
         method: "POST",
         body: JSON.stringify({
           title,
@@ -61,7 +61,7 @@ export default function ProjectPage({
   const handleShare = async () => {
     try {
       const res = await apiFetch(
-        `http://localhost:4000/projects/${projectID}/share`,
+        `https://framesync-knk8.onrender.com/projects/${projectID}/share`,
         {
           method: "POST",
         }
@@ -79,7 +79,7 @@ export default function ProjectPage({
   const inviteUser = async (email: string) => {
     try {
       await apiFetch(
-        `http://localhost:4000/projects/${projectID}/invite`,
+        `https://framesync-knk8.onrender.com/projects/${projectID}/invite`,
         {
           method: "POST",
           body: JSON.stringify({ email }),
@@ -101,7 +101,7 @@ export default function ProjectPage({
   };
 
   useEffect(() => {
-    apiFetch(`http://localhost:4000/videos/project/${projectID}`)
+    apiFetch(`https://framesync-knk8.onrender.com/videos/project/${projectID}`)
       .then((data) => setVideos(data))
       .catch((err) => console.error(err));
   }, [projectID]);
