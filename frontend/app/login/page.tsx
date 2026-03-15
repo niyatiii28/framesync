@@ -16,7 +16,7 @@ export default function LoginPage() {
     e.preventDefault();
 
     try {
-      const res = await fetch("https://framesync-knk8.onrender.com/auth/login", {
+      const res = await fetch("/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

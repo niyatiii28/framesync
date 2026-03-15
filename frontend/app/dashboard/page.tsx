@@ -21,7 +21,7 @@ export default function DashboardPage() {
     setUserEmail(localStorage.getItem("userEmail") || "user@framesync.app");
 
     // Fetch projects
-    apiFetch("https://framesync-knk8.onrender.com/projects")
+    apiFetch("/projects")
       .then(data => setProjects(data))
       .catch(err => console.error(err));
       
@@ -38,7 +38,7 @@ export default function DashboardPage() {
   
   const createProject = async () => {
     try {
-      const newProject = await apiFetch("https://framesync-knk8.onrender.com/projects", {
+      const newProject = await apiFetch("/projects", {
         method: "POST",
         body: JSON.stringify({
           name: "New Project",
