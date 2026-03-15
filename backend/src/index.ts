@@ -22,7 +22,15 @@ const app = express();
    MIDDLEWARE
 ====================== */
 
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:3000",
+      "https://framesync-phi.vercel.app"
+    ],
+    credentials: true
+  })
+);
 app.use(express.json());
 app.use("/projects", projectsRoutes);
 app.use("/videos", videosRoutes);
